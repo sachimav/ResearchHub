@@ -7,7 +7,7 @@
   "type": "module",
   "main": "app.js",
   "scripts": {
-    "start": "nodemon app.js"
+    "start": "nodemon server.js"
   },
   "dependencies": {
     "body-parser": "^2.3.0",
