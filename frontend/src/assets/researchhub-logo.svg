@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 80" fill="none" width="100%" height="100%">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="rhPlumGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b1160" />
+      <stop offset="50%" stop-color="#670047" />
+      <stop offset="100%" stop-color="#4a0033" />
+    </linearGradient>
+    <linearGradient id="rhGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f6d365" />
+      <stop offset="100%" stop-color="#d4af37" />
+    </linearGradient>
+    <linearGradient id="rhAccentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#670047" />
+      <stop offset="100%" stop-color="#b83280" />
+    </linearGradient>
+    <!-- Soft Drop Shadow -->
+    <filter id="rhShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#670047" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Logo Mark Container -->
+  <g transform="translate(10, 8)" filter="url(#rhShadow)">
+    <!-- Hexagonal / Shield Base -->
+    <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#rhPlumGrad)" />
+    <rect x="2" y="2" width="60" height="60" rx="16" stroke="url(#rhGoldGrad)" stroke-width="1.5" stroke-opacity="0.6" fill="none" />
+    
+    <!-- Orbital Nodes & Innovation Rings -->
+    <circle cx="32" cy="32" r="21" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.25" stroke-dasharray="3 2" />
+    <ellipse cx="32" cy="32" rx="22" ry="11" transform="rotate(-30 32 32)" stroke="url(#rhGoldGrad)" stroke-width="1.4" stroke-opacity="0.85" fill="none" />
+    <ellipse cx="32" cy="32" rx="22" ry="11" transform="rotate(30 32 32)" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.4" fill="none" />
+
+    <!-- Central Core Nexus Node -->
+    <circle cx="32" cy="32" r="5.5" fill="url(#rhGoldGrad)" />
+    
+    <!-- Academic Cap / Peak Silhouette -->
+    <path d="M22 28 L32 23 L42 28 L32 33 Z" fill="#ffffff" fill-opacity="0.95" />
+    <path d="M42 28 L42 34" stroke="url(#rhGoldGrad)" stroke-width="1.5" stroke-linecap="round" />
+    <circle cx="42" cy="35" r="1.5" fill="url(#rhGoldGrad)" />
+
+    <!-- Satellite Orbit Nodes -->
+    <circle cx="49" cy="22" r="2.5" fill="url(#rhGoldGrad)" />
+    <circle cx="15" cy="42" r="2" fill="#ffffff" fill-opacity="0.8" />
+    <circle cx="32" cy="11" r="2" fill="#ffffff" fill-opacity="0.9" />
+  </g>
+
+  <!-- Brand Typography -->
+  <g transform="translate(85, 20)">
+    <!-- "Research" text -->
+    <text x="0" y="30" font-family="'Plus Jakarta Sans', 'Outfit', 'Inter', system-ui, sans-serif" font-size="28" font-weight="700" fill="#1e1520" letter-spacing="-0.5">
+      Research<tspan fill="#670047">Hub</tspan>
+    </text>
+    
+    <!-- Badge Dot -->
+    <circle cx="188" cy="18" r="4.5" fill="url(#rhGoldGrad)" />
+
+    <!-- Tagline -->
+    <text x="1" y="46" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="9.5" font-weight="600" fill="#7a6b76" letter-spacing="1.8" text-transform="uppercase">
+      University Research System
+    </text>
+  </g>
+</svg>
