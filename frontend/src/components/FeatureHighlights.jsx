@@ -1,141 +1,113 @@
-import React, { useState } from 'react';
+import React from 'react';
+
+const FEATURES_DATA = [
+  {
+    id: 'project-proposal',
+    title: 'Research project and proposal management',
+    description: 'Submit, review, and track research proposals, problem statements, and methodology drafts with faculty approvals.',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+      </svg>
+    )
+  },
+  {
+    id: 'supervisor-allocation',
+    title: 'Supervisor allocation and management',
+    description: 'Match and assign students to qualified faculty supervisors based on research domain and mentorship capacity.',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    )
+  },
+  {
+    id: 'document-submission',
+    title: 'Research document submission and management',
+    description: 'Centralized repository to securely submit, organize, and archive thesis chapters and ethical clearances.',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="17 8 12 3 7 8" />
+        <line x1="12" y1="3" x2="12" y2="15" />
+      </svg>
+    )
+  },
+  {
+    id: 'progress-milestone',
+    title: 'Project progress and milestone tracking',
+    description: 'Track semester milestones, viva defense dates, chapter sign-offs, and progress in a real-time timeline.',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    )
+  },
+  {
+    id: 'supervisor-feedback',
+    title: 'Supervisor feedback and communication',
+    description: 'Direct advisory communication, annotated review remarks, meeting logs, and rubric assessments.',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+      </svg>
+    )
+  },
+  {
+    id: 'deadline-notifications',
+    title: 'Deadline and project notifications',
+    description: 'Automated alerts and reminders for approaching submission deadlines, defense panels, and reviews.',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+    )
+  },
+  {
+    id: 'similarity-detection',
+    title: 'Research similarity / duplicate-topic detection',
+    description: 'Cross-reference proposed topics against past university dissertations to ensure research originality.',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <path d="M21 21l-4.35-4.35" />
+      </svg>
+    )
+  }
+];
 
 export default function FeatureHighlights() {
-  const [topicInput, setTopicInput] = useState('');
-  const [similarityResult, setSimilarityResult] = useState(null);
-  const [isChecking, setIsChecking] = useState(false);
-
-  const handleQuickCheck = (e) => {
-    e.preventDefault();
-    if (!topicInput.trim()) return;
-
-    setIsChecking(true);
-    setSimilarityResult(null);
-
-    setTimeout(() => {
-      setIsChecking(false);
-      const query = topicInput.toLowerCase();
-      if (query.includes('paddy') || query.includes('agriculture') || query.includes('crop')) {
-        setSimilarityResult({
-          score: 18,
-          status: 'High Novelty (82% Unique)',
-          color: '#059669',
-          message: 'Related to "Crop Disease Detection (2025/01)". Your specific methodology appears distinctive.',
-          recommendation: 'Clear to proceed with research formulation.'
-        });
-      } else if (query.includes('blockchain') || query.includes('health')) {
-        setSimilarityResult({
-          score: 22,
-          status: 'Novel Scope (78% Unique)',
-          color: '#059669',
-          message: 'Partially intersects with "Secure Health Record Exchange (2025/03)". Consider narrowing the consensus algorithm.',
-          recommendation: 'Scope is novel. Proceed with advisor consultation.'
-        });
-      } else {
-        setSimilarityResult({
-          score: 4,
-          status: 'Exceptional Novelty (96% Unique)',
-          color: '#059669',
-          message: 'No overlapping research topics found in the University of Vavuniya dissertation repository.',
-          recommendation: 'Excellent novel candidate! Recommended for full development.'
-        });
-      }
-    }, 800);
-  };
-
   return (
     <section id="features" className="features-section">
       <div className="container">
+        {/* Section Header */}
         <div className="section-header">
-          <span className="section-tag">Core Feature</span>
-          <h2 className="section-title">Duplicate-Topic &amp; Similarity Detection</h2>
+          <span className="section-tag">Key Features</span>
+          <h2 className="section-title">Core Research Features</h2>
           <p className="section-subtitle">
-            Prevent redundant research scopes and ensure intellectual originality across all University 
-            of Vavuniya faculties prior to project allocation.
+            Essential tools for students and supervisors to manage university research efficiently.
           </p>
         </div>
 
-        {/* Dedicated Duplicate & Similarity Detection Spotlight */}
-        <div id="similarity" className="spotlight-card">
-          <div className="spotlight-grid">
-            <div className="spotlight-info">
-              <span className="badge-pill badge-gold">Research Originality Engine</span>
-              <h3 className="spotlight-title">Interactive Research Novelty &amp; Similarity Checker</h3>
-              <p className="spotlight-desc">
-                Our semantic search engine compares prospective research titles against historical theses, 
-                ongoing dissertations, and academic indexes to prevent duplicate topics and safeguard research novelty.
-              </p>
-              
-              <form onSubmit={handleQuickCheck} className="quick-check-form">
-                <label className="input-label" htmlFor="researchTopicInput">
-                  Enter a prospective research topic or question:
-                </label>
-                <div className="check-input-group">
-                  <input
-                    id="researchTopicInput"
-                    type="text"
-                    className="topic-input"
-                    placeholder="e.g. AI-driven microgrid stabilization using reinforcement learning"
-                    value={topicInput}
-                    onChange={(e) => setTopicInput(e.target.value)}
-                  />
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary"
-                    disabled={isChecking || !topicInput.trim()}
-                  >
-                    {isChecking ? 'Analyzing...' : 'Check Novelty'}
-                  </button>
-                </div>
-              </form>
-
-              {similarityResult && (
-                <div className="similarity-result-box">
-                  <div className="result-header">
-                    <span className="result-status" style={{ color: similarityResult.color }}>
-                      ● {similarityResult.status}
-                    </span>
-                    <span className="result-score">Similarity Index: {similarityResult.score}%</span>
-                  </div>
-                  <p className="result-msg">{similarityResult.message}</p>
-                  <div className="result-rec">
-                    <strong>Verdict:</strong> {similarityResult.recommendation}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="spotlight-visual">
-              <div className="similarity-demo-card">
-                <div className="demo-header">
-                  <div className="demo-dot"></div>
-                  <span>Real-Time Topic Cross-Reference Engine</span>
-                </div>
-                <div className="demo-corpus-stats">
-                  <div className="corpus-item">
-                    <span className="c-num">1,240</span>
-                    <span className="c-lbl">Archived Theses</span>
-                  </div>
-                  <div className="corpus-item">
-                    <span className="c-num">184</span>
-                    <span className="c-lbl">Active Projects</span>
-                  </div>
-                  <div className="corpus-item">
-                    <span className="c-num">100%</span>
-                    <span className="c-lbl">Faculty Sync</span>
-                  </div>
-                </div>
-                <div className="demo-code-box">
-                  <code>
-                    &gt; Vector Embedding: Cosine Similarity<br/>
-                    &gt; Cross-Faculty Match: FAS, FTS, FBS<br/>
-                    &gt; Novelty Threshold: &gt; 70% Distinctive<br/>
-                    &gt; Senate Ethics Check: Compliant
-                  </code>
-                </div>
+        {/* Small Feature Cards Grid */}
+        <div className="features-small-grid">
+          {FEATURES_DATA.map((feat) => (
+            <div key={feat.id} className="feature-small-card">
+              <div className="feature-small-icon">
+                {feat.icon}
               </div>
+              <h3 className="feature-small-title">{feat.title}</h3>
+              <p className="feature-small-desc">{feat.description}</p>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>
