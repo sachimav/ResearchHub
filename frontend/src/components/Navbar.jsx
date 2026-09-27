@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import uovLogo from '../assets/logo.png';
-import ResearchHubLogo from './ResearchHubLogo';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -78,19 +77,15 @@ export default function Navbar() {
             <Link to="/about" className="nav-link">About Us</Link>
           </div>
 
-          {/* Right Side: ResearchHub Text-Only Logo & Portal Login */}
+          {/* Right Side: Login & Mobile Menu Toggle */}
           <div className="nav-right-brand">
-            <div className="researchhub-header-brand" title="ResearchHub Platform">
-              <Link to="/"><ResearchHubLogo fontSize={28} /></Link>
-            </div>
-
             <div className="nav-actions">
               <a 
                 href="#portals" 
                 className="btn btn-outline btn-sm login-btn"
                 onClick={(e) => handleNavClick('portals', e)}
               >
-                <span>Portal Login</span>
+                <span>Login</span>
               </a>
             </div>
 
@@ -119,7 +114,6 @@ export default function Navbar() {
           <div className="mobile-drawer-inner">
             <div className="mobile-brand-row">
               <img src={uovLogo} alt="University of Vavuniya" className="mobile-uov-logo" />
-              <ResearchHubLogo fontSize={22} />
             </div>
             <div className="mobile-links">
               <a 
@@ -144,7 +138,7 @@ export default function Navbar() {
                 style={{ width: '100%', textAlign: 'center' }}
                 onClick={(e) => handleNavClick('portals', e)}
               >
-                Access Portal Login
+                Login
               </a>
             </div>
           </div>

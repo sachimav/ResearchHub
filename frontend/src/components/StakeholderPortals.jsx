@@ -1,189 +1,326 @@
 import React, { useState } from 'react';
 
-const PORTAL_DATA = [
+const UNIVERSITY_STATS = [
   {
-    id: 'students',
-    role: 'Students',
-    title: 'Student Research Portal',
-    badge: 'Research & Collaboration',
-    description: 'Designed to guide undergraduates and postgraduates through every stage of their academic research lifecycle.',
-    features: [
-      { title: 'Project Registration', desc: 'Register research topics, problem statements, and methodology drafts.' },
-      { title: 'Duplicate-Topic Novelty Check', desc: 'Pre-screen research titles against university archives to ensure novelty.' },
-      { title: 'Progress Tracking', desc: 'Track chapters, defense schedules, and milestones in a structured timeline.' },
-      { title: 'Supervisor Feedback Hub', desc: 'Access annotated feedback, meeting notes, and rubric scores in one place.' }
-    ],
-    actionText: 'Enter Student Portal'
+    id: 'conducted-research',
+    value: '1,280+',
+    label: 'Researches Conducted',
+    detail: 'Completed academic theses, dissertations, and capstone projects across all faculties',
+    badge: 'Verified Repository',
+    icon: (
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        <line x1="9" y1="7" x2="15" y2="7" />
+        <line x1="9" y1="11" x2="13" y2="11" />
+      </svg>
+    ),
   },
   {
-    id: 'supervisors',
-    role: 'Supervisors & Mentors',
-    title: 'Supervisor Review Portal',
-    badge: 'Evaluation & Mentorship',
-    description: 'Empower faculty members to efficiently supervise multiple student cohorts, evaluate progress, and publish breakthroughs.',
-    features: [
-      { title: 'Structured Evaluation Rubrics', desc: 'Review student research progress with standardized department rubrics.' },
-      { title: 'Milestone Sign-Offs', desc: 'Sign off on literature reviews, methodology, empirical testing, and final manuscripts.' },
-      { title: 'Supervisory Meeting Logs', desc: 'Record bilateral meeting summaries, action items, and student progress notes.' },
-      { title: 'Defense & Evaluation Panels', desc: 'Submit final viva voce scores and committee evaluation notes securely.' }
-    ],
-    actionText: 'Enter Supervisor Portal'
+    id: 'active-studies',
+    value: '186',
+    label: 'Active Research Studies',
+    detail: 'Undergraduate and postgraduate projects currently under development and supervision',
+    badge: '2025/2026 Cycle',
+    icon: (
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+      </svg>
+    ),
   },
   {
-    id: 'administrators',
-    role: 'Administrators & Deans',
-    title: 'Administrative Control Center',
-    badge: 'Governance & Analytics',
-    description: 'Complete institutional visibility across all faculties, departments, ethics reviews, supervisor allocations, and university metrics.',
-    features: [
-      { title: 'Supervisor Allocation Engine', desc: 'Match students with faculty supervisors based on research domain and workload capacity.' },
-      { title: 'Timeline & Milestone Scheduling', desc: 'Set institutional academic windows, defense periods, and progress checkpoints.' },
-      { title: 'Accreditation & Quality Reports', desc: 'Export comprehensive statistical reports for university senate and Ministry accreditation.' },
-      { title: 'Ethics Committee Clearance', desc: 'Manage institutional ethics reviews and compliance certifications.' }
-    ],
-    actionText: 'Enter Admin Dashboard'
+    id: 'supervisors-mentors',
+    value: '78+',
+    label: 'Academic Supervisors',
+    detail: 'Faculty professors, senior lecturers, and industry mentors offering specialized guidance',
+    badge: 'Expert Faculty',
+    icon: (
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
   },
   {
-    id: 'industry',
-    role: 'Industry & Public',
-    title: 'Industry & Collaboration Portal',
-    badge: 'Tech Transfer & Talent',
-    description: 'Bridge academic rigor with corporate innovation. Discover cutting-edge university research, sponsor projects, and scout top talent.',
-    features: [
-      { title: 'Public Research Repository', desc: 'Browse non-confidential research deliverables, whitepapers, and prototype demos.' },
-      { title: 'Internship & Talent Pipeline', desc: 'Directly connect with top-performing student researchers for internships and R&D roles.' },
-      { title: 'R&D Grant Sponsorship', desc: 'Sponsor university research tracks and provide real-world problem statements.' },
-      { title: 'Technology Transfer', desc: 'Explore commercializable intellectual property and collaborative pilot projects.' }
-    ],
-    actionText: 'Explore Collaboration Opportunities'
-  }
+    id: 'publications-patents',
+    value: '420+',
+    label: 'Publications & Innovations',
+    detail: 'Peer-reviewed research articles, international conference proceedings, and inventions',
+    badge: 'Global Impact',
+    icon: (
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="7" />
+        <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+      </svg>
+    ),
+  },
 ];
 
 export default function StakeholderPortals() {
-  const [activeTab, setActiveTab] = useState(0);
-  const current = PORTAL_DATA[activeTab];
+  const [modalRole, setModalRole] = useState(null); // 'student' | 'supervisor' | null
+  const [regOrEmail, setRegOrEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginSuccess, setLoginSuccess] = useState(false);
+
+  const handleOpenModal = (role) => {
+    setModalRole(role);
+    setLoginSuccess(false);
+    if (role === 'student') {
+      setRegOrEmail('2021/ICT/042');
+      setPassword('••••••••');
+    } else {
+      setRegOrEmail('dr.kartheepan@vau.ac.lk');
+      setPassword('••••••••');
+    }
+  };
+
+  const handleCloseModal = () => {
+    setModalRole(null);
+    setLoginSuccess(false);
+  };
+
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    setLoginSuccess(true);
+  };
 
   return (
     <section id="portals" className="portals-section">
       <div className="container">
+        {/* Section Header */}
         <div className="section-header">
-          <span className="section-tag">Role-Based Ecosystem</span>
-          <h2 className="section-title">One Unified Platform for All Stakeholders</h2>
-          <p className="section-subtitle">
-            ResearchHub connects every participant in the university research lifecycle with dedicated,
-            role-tailored tools and real-time synchronicity.
-          </p>
+          <span className="section-tag">University Research Output &amp; Access</span>
+          <h2 className="section-title">University Research Overview &amp; Portals</h2>
         </div>
 
-        {/* Tab Selection Buttons — no emojis */}
-        <div className="portal-tabs-nav">
-          {PORTAL_DATA.map((item, idx) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`portal-tab-btn ${activeTab === idx ? 'active' : ''}`}
-              onClick={() => setActiveTab(idx)}
-            >
-              <span className="tab-label">{item.role}</span>
-            </button>
+        {/* Research Statistics Cards ("carts like number of researcs university did") */}
+        <div className="stats-cards-grid">
+          {UNIVERSITY_STATS.map((stat) => (
+            <div key={stat.id} className="stat-card glass-card">
+
+              <div className="stat-card-body">
+                <div className="stat-card-value">{stat.value}</div>
+                <h3 className="stat-card-title">{stat.label}</h3>
+                <p className="stat-card-desc">{stat.detail}</p>
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* Tab Content */}
-        <div className="portal-content-card glass-card">
-          <div className="portal-grid">
-            {/* Left Info Column */}
-            <div className="portal-info-col">
-              <div className="portal-badge-row">
-                <span className="badge-pill badge-plum">{current.badge}</span>
-                <span className="portal-id-tag">Role: {current.role}</span>
-              </div>
+        {/* Dual Entry Gateways with the Two Buttons */}
+        <div className="portal-gateways-container">
+          <div className="portal-gateways-header">
+            <h3 className="gateways-heading">Get Started</h3>
 
-              <h3 className="portal-headline">{current.title}</h3>
-              <p className="portal-desc-text">{current.description}</p>
+          </div>
 
-              <div className="portal-features-list">
-                {current.features.map((feat, i) => (
-                  <div key={i} className="portal-feature-item">
-                    <div className="feature-check-icon">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#670047" strokeWidth="3">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="feature-title">{feat.title}</h4>
-                      <p className="feature-desc">{feat.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="portal-btn-row">
-                <button type="button" className="btn btn-primary">
-                  <span>{current.actionText}</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
+          <div className="portal-gateways-grid">
+            {/* Enter as Student Card */}
+            <div className="gateway-card glass-card">
+              <div className="gateway-card-header">
+                <div className="gateway-icon student-avatar">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                    <path d="M6 12v5c3 3 9 3 12 0v-5" />
                   </svg>
-                </button>
-                <span className="sso-hint">Integrated with University of Vavuniya SSO</span>
+                </div>
+                <div>
+                  <span className="badge-pill badge-plum">Student Portal</span>
+                  <h4 className="gateway-role-title">Undergraduate &amp; Postgraduate</h4>
+                </div>
               </div>
+
+              <p className="gateway-role-desc">
+                Submit research proposals, verify topic novelty against university archives, track milestone deadlines, and collaborate with your assigned mentor.
+              </p>
+
+              <ul className="gateway-feature-bullets">
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#670047" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>Submit proposals and research documents</span>
+                </li>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#670047" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>Track project progress and milestones.</span>
+                </li>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#670047" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>Receive supervisor feedback.</span>
+                </li>
+              </ul>
+
+              <button
+                type="button"
+                className="btn btn-primary btn-block gateway-btn"
+                onClick={() => handleOpenModal('student')}
+              >
+                <span>Enter as Student</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
             </div>
 
-            {/* Right: Minimal portal preview frame — no dummy metrics */}
-            <div className="portal-preview-col">
-              <div className="preview-dashboard-frame">
-                <div className="frame-header">
-                  <div className="dots-row">
-                    <span className="dot red"></span>
-                    <span className="dot yellow"></span>
-                    <span className="dot green"></span>
-                  </div>
-                  <div className="frame-address-bar">
-                    researchhub.vau.ac.lk/{current.id}
-                  </div>
+            {/* Enter as Supervisor Card */}
+            <div className="gateway-card glass-card">
+              <div className="gateway-card-header">
+                <div className="gateway-icon supervisor-avatar">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
                 </div>
-
-                <div className="frame-body">
-                  <div className="mock-user-bar">
-                    <div className="mock-avatar-text">{current.role.charAt(0)}</div>
-                    <div>
-                      <div className="mock-user-name">{current.role} Portal</div>
-                      <div className="mock-user-role">University of Vavuniya — ResearchHub</div>
-                    </div>
-                  </div>
-
-                  {/* No dummy metrics — just a "awaiting data" placeholder */}
-                  <div className="portal-awaiting-db">
-                    <div className="awaiting-icon">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="1.5">
-                        <ellipse cx="12" cy="5" rx="9" ry="3"/>
-                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
-                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
-                      </svg>
-                    </div>
-                    <p className="awaiting-text">Live data will appear here once the database is connected.</p>
-                  </div>
-
-                  <div className="mock-action-list">
-                    <div className="mock-action-item">
-                      <span className="action-tag active">Module</span>
-                      <span className="action-name">Research Portfolio Management</span>
-                    </div>
-                    <div className="mock-action-item">
-                      <span className="action-tag active">Module</span>
-                      <span className="action-name">Ethics Review & Clearance</span>
-                    </div>
-                    <div className="mock-action-item">
-                      <span className="action-tag active">Module</span>
-                      <span className="action-name">Topic Similarity Cross-Reference</span>
-                    </div>
-                  </div>
+                <div>
+                  <span className="badge-pill badge-gold">Supervisor Portal</span>
+                  <h4 className="gateway-role-title">Faculty Members &amp; Mentors</h4>
                 </div>
               </div>
+
+              <p className="gateway-role-desc">
+                Review and approve student research submissions, evaluate milestones using faculty-standard rubrics, record advisory meeting logs, and submit marks.
+              </p>
+
+              <ul className="gateway-feature-bullets">
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>Review research proposals.</span>
+                </li>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>Monitor project progress.</span>
+                </li>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>Provide feedback.</span>
+                </li>
+              </ul>
+
+              <button
+                type="button"
+                className="btn btn-outline btn-block gateway-btn gateway-btn-supervisor"
+                onClick={() => handleOpenModal('supervisor')}
+              >
+                <span>Enter as Supervisor</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Role SSO Entry Modal */}
+      {modalRole && (
+        <div className="modal-overlay" onClick={handleCloseModal}>
+          <div className="portal-login-modal glass-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-wrap">
+                <span className="badge-pill badge-plum">University of Vavuniya SSO</span>
+                <h3 className="modal-title">
+                  {modalRole === 'student' ? 'Student Portal Access' : 'Supervisor Portal Access'}
+                </h3>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={handleCloseModal}>
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-role-switcher">
+              <button
+                type="button"
+                className={`role-switch-btn ${modalRole === 'student' ? 'active' : ''}`}
+                onClick={() => handleOpenModal('student')}
+              >
+                Student
+              </button>
+              <button
+                type="button"
+                className={`role-switch-btn ${modalRole === 'supervisor' ? 'active' : ''}`}
+                onClick={() => handleOpenModal('supervisor')}
+              >
+                Supervisor
+              </button>
+            </div>
+
+            {loginSuccess ? (
+              <div className="login-success-state">
+                <div className="success-icon-bubble">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="3">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <h4 className="success-title">Authentication Successful!</h4>
+                <p className="success-message">
+                  Welcome to the {modalRole === 'student' ? 'Student Research Portal' : 'Faculty Supervisor Portal'}. Your session is verified with the University of Vavuniya SSO.
+                </p>
+                <button type="button" className="btn btn-primary" onClick={handleCloseModal}>
+                  Enter Dashboard
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleLoginSubmit} className="portal-login-form">
+                <div className="form-group">
+                  <label className="input-label" htmlFor="userIdentifier">
+                    {modalRole === 'student' ? 'Registration Number' : 'Institutional Email / Staff ID'}
+                  </label>
+                  <input
+                    id="userIdentifier"
+                    type="text"
+                    className="topic-input form-input-styled"
+                    value={regOrEmail}
+                    onChange={(e) => setRegOrEmail(e.target.value)}
+                    required
+                  />
+                  <span className="input-helper">
+                    {modalRole === 'student' ? 'e.g. 2021/ICT/042' : 'e.g. name@vau.ac.lk'}
+                  </span>
+                </div>
+
+                <div className="form-group">
+                  <label className="input-label" htmlFor="userPassword">
+                    SSO Password
+                  </label>
+                  <input
+                    id="userPassword"
+                    type="password"
+                    className="topic-input form-input-styled"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="modal-btn-row">
+                  <button type="submit" className="btn btn-primary btn-block">
+                    <span>Proceed as {modalRole === 'student' ? 'Student' : 'Supervisor'}</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <button type="button" className="btn btn-glass" onClick={handleCloseModal}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
