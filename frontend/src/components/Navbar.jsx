@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import uovLogo from '../assets/logo.png';
 import ResearchHubLogo from './ResearchHubLogo';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -14,6 +16,31 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleNavClick = (sectionId, e) => {
+    if (e) e.preventDefault();
+    setMobileMenuOpen(false);
+
+    if (location.pathname === '/') {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } else {
+      navigate('/');
+      // Once navigated to home, scroll to the targeted section
+      setTimeout(() => {
+        const el = document.getElementById(sectionId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  };
 
   return (
     <header className={`navbar-wrapper ${scrolled ? 'scrolled' : ''}`}>
@@ -33,8 +60,20 @@ export default function Navbar() {
 
           {/* Center: Overview, Features, Research Showcase, About Us */}
           <div className="nav-center-links">
-            <a href="#overview" className="nav-link">Overview</a>
-            <a href="#features" className="nav-link">Features</a>
+            <a 
+              href="#overview" 
+              className="nav-link"
+              onClick={(e) => handleNavClick('overview', e)}
+            >
+              Overview
+            </a>
+            <a 
+              href="#features" 
+              className="nav-link"
+              onClick={(e) => handleNavClick('features', e)}
+            >
+              Features
+            </a>
             <Link to="/showcase" className="nav-link">Research Showcase</Link>
             <Link to="/about" className="nav-link">About Us</Link>
           </div>
@@ -46,7 +85,11 @@ export default function Navbar() {
             </div>
 
             <div className="nav-actions">
-              <a href="#portals" className="btn btn-outline btn-sm login-btn">
+              <a 
+                href="#portals" 
+                className="btn btn-outline btn-sm login-btn"
+                onClick={(e) => handleNavClick('portals', e)}
+              >
                 <span>Portal Login</span>
               </a>
             </div>
@@ -79,8 +122,18 @@ export default function Navbar() {
               <ResearchHubLogo fontSize={22} />
             </div>
             <div className="mobile-links">
-              <a href="#overview" onClick={() => setMobileMenuOpen(false)}>Overview</a>
-              <a href="#features" onClick={() => setMobileMenuOpen(false)}>Features</a>
+              <a 
+                href="#overview" 
+                onClick={(e) => handleNavClick('overview', e)}
+              >
+                Overview
+              </a>
+              <a 
+                href="#features" 
+                onClick={(e) => handleNavClick('features', e)}
+              >
+                Features
+              </a>
               <Link to="/showcase" onClick={() => setMobileMenuOpen(false)}>Research Showcase</Link>
               <Link to="/about" onClick={() => setMobileMenuOpen(false)}>About Us</Link>
             </div>
@@ -89,7 +142,7 @@ export default function Navbar() {
                 href="#portals" 
                 className="btn btn-outline" 
                 style={{ width: '100%', textAlign: 'center' }}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={(e) => handleNavClick('portals', e)}
               >
                 Access Portal Login
               </a>
