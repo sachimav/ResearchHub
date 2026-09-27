@@ -1,8 +1,34 @@
 import React from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import uovLogo from '../assets/logo.png';
 import ResearchHubLogo from './ResearchHubLogo';
 
 export default function Footer() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleNavClick = (sectionId, e) => {
+    if (e) e.preventDefault();
+
+    if (location.pathname === '/') {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } else {
+      navigate('/');
+      setTimeout(() => {
+        const el = document.getElementById(sectionId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  };
   return (
     <footer className="footer-wrapper">
       {/* Main Institutional Footer - Next Academic Cycle CTA Removed */}
@@ -61,10 +87,10 @@ export default function Footer() {
           <div className="footer-col">
             <h4 className="footer-col-title">Quick Navigation</h4>
             <ul className="footer-links-list">
-              <li><a href="#overview">Overview &amp; Statistics</a></li>
-              <li><a href="#features">Duplicate-Topic Detection</a></li>
-              <li><a href="#showcase">Research Project Showcase</a></li>
-              <li><a href="#portals">Role-Based Portals</a></li>
+              <li><a href="#overview" onClick={(e) => handleNavClick('overview', e)}>Overview &amp; Statistics</a></li>
+              <li><a href="#features" onClick={(e) => handleNavClick('features', e)}>Duplicate-Topic Detection</a></li>
+              <li><Link to="/showcase">Research Project Showcase</Link></li>
+              <li><a href="#portals" onClick={(e) => handleNavClick('portals', e)}>Role-Based Portals</a></li>
               <li><a href="https://www.vau.ac.lk" target="_blank" rel="noopener noreferrer">University of Vavuniya Official</a></li>
             </ul>
           </div>
@@ -73,11 +99,11 @@ export default function Footer() {
           <div className="footer-col">
             <h4 className="footer-col-title">Portals &amp; Governance</h4>
             <ul className="footer-links-list">
-              <li><a href="#portals">Student Dissertation Portal</a></li>
-              <li><a href="#portals">Faculty Supervisor Console</a></li>
-              <li><a href="#portals">Dean &amp; Administrator Hub</a></li>
-              <li><a href="#showcase">Public Research Showcase</a></li>
-              <li><a href="#features">Novelty &amp; Similarity Checker</a></li>
+              <li><a href="#portals" onClick={(e) => handleNavClick('portals', e)}>Student Dissertation Portal</a></li>
+              <li><a href="#portals" onClick={(e) => handleNavClick('portals', e)}>Faculty Supervisor Console</a></li>
+              <li><a href="#portals" onClick={(e) => handleNavClick('portals', e)}>Dean &amp; Administrator Hub</a></li>
+              <li><Link to="/showcase">Public Research Showcase</Link></li>
+              <li><a href="#features" onClick={(e) => handleNavClick('features', e)}>Novelty &amp; Similarity Checker</a></li>
             </ul>
           </div>
         </div>
