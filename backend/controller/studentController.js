@@ -24,6 +24,20 @@ export const getProfile = async(req,res) => {
         return res.status(200).json({student});
     }
     catch(error){
-        return error;
+        res.status(400).json({message:error.message});
     }
 };
+
+export const listResearch = async(req,res) =>{
+    try{
+        const student = await Student.findOne({ userId: req.user.id });
+        if(!student){
+            return res.status(404).json({message:"student profile not found"});
+        }
+        const research = await Research.find({ studentId: student._id }).sort({ updatedAt: -1 });
+        return res.json({research});
+    }
+    catch(error){
+        res.status(400).json({ message: error.message });
+    }
+}
