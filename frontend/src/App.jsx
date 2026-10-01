@@ -7,6 +7,9 @@ import StakeholderPortals from './components/StakeholderPortals';
 import FeatureHighlights from './components/FeatureHighlights';
 import Footer from './components/Footer';
 import ShowcasePage from './pages/ShowcasePage';
+import AuthPage from './pages/AuthPage';
+import StudentPortalPage from './pages/StudentPortalPage';
+import SupervisorPortalPage from './pages/SupervisorPortalPage';
 
 /* ── Home landing page ─────────────────────────────── */
 function HomePage() {
@@ -28,6 +31,11 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/showcase" element={<ShowcasePage />} />
+          <Route path="/login" element={<AuthPage initialMode="login" />} />
+          <Route path="/register" element={<AuthPage initialMode="register" />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/student-portal" element={<StudentPortalPage />} />
+          <Route path="/supervisor-portal" element={<SupervisorPortalPage />} />
         </Routes>
       </main>
       <Footer />
