@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import uovLogo from '../assets/logo.png';
+import { getCurrentUser, logoutUser, onAuthStateChanged } from '../services/authService';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(getCurrentUser());
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -14,6 +16,14 @@ export default function Navbar() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    // Listen for auth state changes
+    const unsubscribe = onAuthStateChanged((user) => {
+      setCurrentUser(user);
+    });
+    return unsubscribe;
   }, []);
 
   const handleNavClick = (sectionId, e) => {
@@ -39,6 +49,17 @@ export default function Navbar() {
         }
       }, 100);
     }
+  };
+
+  const getPortalRoute = (role) => {
+    if (role === 'student') return '/student-portal';
+    if (role === 'supervisor') return '/supervisor-portal';
+    return '/showcase';
+  };
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate('/');
   };
 
   return (
@@ -80,13 +101,36 @@ export default function Navbar() {
           {/* Right Side: Login & Mobile Menu Toggle */}
           <div className="nav-right-brand">
             <div className="nav-actions">
-              <a 
-                href="#portals" 
-                className="btn btn-outline btn-sm login-btn"
-                onClick={(e) => handleNavClick('portals', e)}
-              >
-                <span>Login</span>
-              </a>
+              {currentUser ? (
+                <div className="nav-user-logged">
+                  <Link
+                    to={getPortalRoute(currentUser.role)}
+                    className="nav-user-chip"
+                    title={`Logged in as ${currentUser.name}`}
+                  >
+                    <span className="user-chip-icon">
+                      {currentUser.role === 'student' ? '🎓' : currentUser.role === 'supervisor' ? '👨‍🏫' : '👥'}
+                    </span>
+                    <span className="user-chip-name">{currentUser.name}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm logout-nav-btn"
+                    onClick={handleLogout}
+                    title="Sign Out"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  id="navbar-login-btn"
+                  className="btn btn-outline btn-sm login-btn"
+                >
+                  <span>Login</span>
+                </Link>
+              )}
             </div>
 
             {/* Mobile Hamburger Button */}
@@ -132,14 +176,38 @@ export default function Navbar() {
               <Link to="/about" onClick={() => setMobileMenuOpen(false)}>About Us</Link>
             </div>
             <div className="mobile-actions">
-              <a 
-                href="#portals" 
-                className="btn btn-outline" 
-                style={{ width: '100%', textAlign: 'center' }}
-                onClick={(e) => handleNavClick('portals', e)}
-              >
-                Login
-              </a>
+              {currentUser ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                  <Link
+                    to={getPortalRoute(currentUser.role)}
+                    className="btn btn-primary"
+                    style={{ width: '100%', textAlign: 'center' }}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Go to Portal ({currentUser.name})
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ width: '100%', textAlign: 'center' }}
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="btn btn-outline"
+                  style={{ width: '100%', textAlign: 'center' }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Login
+                </Link>
+              )}
             </div>
           </div>
         </div>

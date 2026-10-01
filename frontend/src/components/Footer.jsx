@@ -37,7 +37,7 @@ export default function Footer() {
           {/* Column 1: Dual Logos and Institutional Info */}
           <div className="footer-col brand-col">
             <div className="footer-logos-dual">
-
+              <img src={uovLogo} alt="University of Vavuniya" className="footer-uov-logo" />
               <div className="footer-logo-divider"></div>
               <ResearchHubLogo fontSize={24} lightMode={true} />
             </div>

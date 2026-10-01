@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 
 const UNIVERSITY_STATS = [
   {
@@ -59,6 +60,7 @@ const UNIVERSITY_STATS = [
 ];
 
 export default function StakeholderPortals() {
+  const navigate = useNavigate();
   const [modalRole, setModalRole] = useState(null); // 'student' | 'supervisor' | null
   const [regOrEmail, setRegOrEmail] = useState('');
   const [password, setPassword] = useState('');
