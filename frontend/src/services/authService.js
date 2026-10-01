@@ -1,68 +1,100 @@
 /**
  * Authentication and User Storage Service
- * Handles role-based authentication, user persistence via localStorage,
- * session management, and validation.
+ * Matches Mongoose Database Schemas:
+ * - user.js (name, email, password, role, institution, designation, phone)
+ * - Student.js (userId, regNo, departmentId/department, batchId/batch, program)
+ * - supervisor.js (userId, departmentId/department, designation, expertise)
+ * - department.js (name, description)
+ * - batch.js (batchName, academicYear)
  */
 
 const USERS_STORAGE_KEY = 'researchhub_users_db';
 const SESSION_STORAGE_KEY = 'researchhub_session';
 const AUTH_EVENT_KEY = 'researchhub_auth_change';
 
-// Pre-seeded demo accounts for quick testing
-const INITIAL_DEMO_USERS = [
-  {
-    id: 'user_std_01',
-    role: 'student',
-    name: 'S. Mithun',
-    email: 'student@vau.ac.lk',
-    password: 'password123',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'user_pub_01',
-    role: 'public',
-    name: 'Dr. Anura Perera',
-    institution: 'AgriTech Lanka PLC',
-    designation: 'Lead Research Scientist',
-    email: 'anura.perera@agritech.lk',
-    phone: '+94 77 123 4567',
-    password: 'password123',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'user_sup_01',
-    role: 'supervisor',
-    name: 'Dr. T. Kartheepan',
-    email: 'supervisor@vau.ac.lk',
-    password: 'password123',
-    createdAt: new Date().toISOString()
-  }
+// Standard university reference datasets matching Database Models
+export const DEPARTMENTS = [
+  'Physical Science ',
+  'Biological Science',
 ];
 
-// Helper: load stored users from localStorage or initialize with defaults
+export const BATCHES = [
+  '2023/2024',
+  '2022/2023',
+  '2021/2022',
+  '2020/2021',
+  '2019/2020',
+];
+
+export const DEGREE_PROGRAMS = [
+  'BSc (Hons) in Information & Technology',
+  'Bachelor of Science in Applied Mathematics & Computing',
+  'BSc in Biological Science',
+];
+
+export const SUPERVISOR_DESIGNATIONS = [
+  'Professor',
+  'Associate Professor',
+  'Senior Lecturer (Grade I)',
+  'Senior Lecturer (Grade II)',
+  'Lecturer',
+  'Visiting Research Fellow',
+];
+
+// Helper: purge any legacy demo / predefined student, supervisor, public accounts
+const LEGACY_PREDEFINED_EMAILS = [
+  '2022/ict/201@vau.ac.lk',
+  'silva@vau.ac.lk',
+];
+
+function isPredefinedAccount(user) {
+  if (!user) return false;
+  const isDemoId = typeof user.id === 'string' && user.id.startsWith('usr_demo_');
+  const isLegacyEmail = user.email && LEGACY_PREDEFINED_EMAILS.includes(user.email.toLowerCase().trim());
+  return isDemoId || isLegacyEmail;
+}
+
+// Clean predefined accounts immediately from browser storage
+try {
+  const raw = localStorage.getItem(USERS_STORAGE_KEY);
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      const sanitized = parsed.filter((u) => !isPredefinedAccount(u));
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(sanitized));
+    }
+  }
+  const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (sessionRaw) {
+    const sessionUser = JSON.parse(sessionRaw);
+    if (isPredefinedAccount(sessionUser)) {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+  }
+} catch {
+  // safe fallback
+}
+
+// Local user store helper (stores newly registered users until backend API is connected)
 export function getStoredUsers() {
   try {
     const raw = localStorage.getItem(USERS_STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_DEMO_USERS));
-      return INITIAL_DEMO_USERS;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_DEMO_USERS));
-      return INITIAL_DEMO_USERS;
-    }
-    return parsed;
+    const users = Array.isArray(parsed) ? parsed : [];
+    // Ensure no predefined accounts are returned
+    return users.filter((u) => !isPredefinedAccount(u));
   } catch (err) {
     console.error('Error reading stored users:', err);
-    return INITIAL_DEMO_USERS;
+    return [];
   }
 }
 
 // Helper: save users array to localStorage
 export function saveStoredUsers(users) {
   try {
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    const sanitized = (Array.isArray(users) ? users : []).filter((u) => !isPredefinedAccount(u));
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(sanitized));
   } catch (err) {
     console.error('Error saving users:', err);
   }
@@ -82,7 +114,15 @@ export function emailExists(email) {
   return users.some((u) => u.email.toLowerCase() === normalized);
 }
 
-// Register user with role-based attributes
+// Check if student registration number already exists (unique: true in Student.js)
+export function regNoExists(regNo) {
+  if (!regNo) return false;
+  const users = getStoredUsers();
+  const normalized = regNo.trim().toUpperCase();
+  return users.some((u) => u.role === 'student' && u.regNo && u.regNo.trim().toUpperCase() === normalized);
+}
+
+// Register user with schema-aligned attributes
 export function registerUser(role, userData) {
   const users = getStoredUsers();
   const email = (userData.email || '').trim();
@@ -92,11 +132,11 @@ export function registerUser(role, userData) {
   if (!isValidEmail(email)) {
     return {
       success: false,
-      error: 'Please enter a valid email address (e.g., name@domain.com).'
+      error: 'Please enter a valid email address.'
     };
   }
 
-  // 2. Duplicate email check
+  // 2. Duplicate email check (unique in user.js)
   if (users.some((u) => u.email.toLowerCase() === normalizedEmail)) {
     return {
       success: false,
@@ -119,54 +159,89 @@ export function registerUser(role, userData) {
     };
   }
 
-  // 4. Role-specific validation
+  // 4. Common validation: Name (required in user.js)
   if (!userData.name || !userData.name.trim()) {
-    return { success: false, error: 'Name is required.' };
+    return { success: false, error: 'Full Name is required.' };
   }
 
-  if (role === 'public') {
+  // 5. Role-specific validations matching Database Models
+  const roleData = {};
+
+  if (role === 'student') {
+    // Student.js: regNo, departmentId/department, batchId/batch, program
+    const regNo = (userData.regNo || '').trim().toUpperCase();
+    if (!regNo) {
+      return { success: false, error: 'Student Registration Number (e.g., 2020/ICT/042) is required.' };
+    }
+    if (regNoExists(regNo)) {
+      return { success: false, error: `Student with Registration Number "${regNo}" is already registered.` };
+    }
+    if (!userData.department || !userData.department.trim()) {
+      return { success: false, error: 'Academic Department is required for Students.' };
+    }
+    if (!userData.batch || !userData.batch.trim()) {
+      return { success: false, error: 'Academic Batch / Year is required for Students.' };
+    }
+    if (!userData.program || !userData.program.trim()) {
+      return { success: false, error: 'Degree Program is required for Students.' };
+    }
+
+    roleData.regNo = regNo;
+    roleData.department = userData.department.trim();
+    roleData.batch = userData.batch.trim();
+    roleData.program = userData.program.trim();
+  } else if (role === 'supervisor') {
+    // supervisor.js: designation, departmentId/department, expertise
+    if (!userData.designation || !userData.designation.trim()) {
+      return { success: false, error: 'Academic Designation is required for Supervisors.' };
+    }
+    if (!userData.department || !userData.department.trim()) {
+      return { success: false, error: 'Academic Department is required for Supervisors.' };
+    }
+    if (!userData.expertise || !userData.expertise.trim()) {
+      return { success: false, error: 'Research Expertise / Specialization is required.' };
+    }
+
+    roleData.designation = userData.designation.trim();
+    roleData.department = userData.department.trim();
+    roleData.expertise = userData.expertise.trim();
+  } else if (role === 'public') {
+    // user.js extended: institution, designation, phone
     if (!userData.institution || !userData.institution.trim()) {
-      return { success: false, error: 'Institution is required for Public Users.' };
+      return { success: false, error: 'Institution / Organization is required for Public Users.' };
     }
     if (!userData.designation || !userData.designation.trim()) {
-      return { success: false, error: 'Designation is required for Public Users.' };
+      return { success: false, error: 'Designation / Job Title is required for Public Users.' };
     }
     if (!userData.phone || !userData.phone.trim()) {
-      return { success: false, error: 'Phone Number is required for Public Users.' };
+      return { success: false, error: 'Contact Phone Number is required for Public Users.' };
     }
+
+    roleData.institution = userData.institution.trim();
+    roleData.designation = userData.designation.trim();
+    roleData.phone = userData.phone.trim();
   }
 
-  // Construct new user entity
+  // Construct new user entity mirroring database models
   const newUser = {
     id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    role, // 'student' | 'public' | 'supervisor'
+    role, // 'student' | 'supervisor' | 'public'
     name: userData.name.trim(),
     email: normalizedEmail,
     password: userData.password,
-    ...(role === 'public'
-      ? {
-        institution: userData.institution.trim(),
-        designation: userData.designation.trim(),
-        phone: userData.phone.trim()
-      }
-      : {}),
+    ...roleData,
     createdAt: new Date().toISOString()
   };
 
   users.push(newUser);
   saveStoredUsers(users);
 
+  // Return sanitized user object without plaintext password
+  const { password: _, ...sanitizedUser } = newUser;
+
   return {
     success: true,
-    user: {
-      id: newUser.id,
-      role: newUser.role,
-      name: newUser.name,
-      email: newUser.email,
-      institution: newUser.institution,
-      designation: newUser.designation,
-      phone: newUser.phone
-    }
+    user: sanitizedUser
   };
 }
 
@@ -188,7 +263,7 @@ export function loginUser(role, email, password) {
   if (!foundUser) {
     return {
       success: false,
-      error: 'No account found with this email. Please check your email or register.'
+      error: 'No account found with this email. Please check your credentials or register.'
     };
   }
 
@@ -203,26 +278,18 @@ export function loginUser(role, email, password) {
   if (foundUser.role !== role) {
     const roleLabels = {
       student: 'Student',
-      public: 'Public User',
-      supervisor: 'Supervisor'
+      supervisor: 'Supervisor',
+      public: 'Public User'
     };
     return {
       success: false,
-      error: `This account is registered as a "${roleLabels[foundUser.role] || foundUser.role}". Please select the correct role above to proceed.`
+      error: `This account is registered as a "${roleLabels[foundUser.role] || foundUser.role}". Please switch to the ${roleLabels[foundUser.role] || 'appropriate'} tab above to login.`
     };
   }
 
-  // Set session
-  const sessionUser = {
-    id: foundUser.id,
-    role: foundUser.role,
-    name: foundUser.name,
-    email: foundUser.email,
-    institution: foundUser.institution,
-    designation: foundUser.designation,
-    phone: foundUser.phone,
-    loginTime: new Date().toISOString()
-  };
+  // Construct active session payload with full model profile
+  const { password: _, ...sessionUser } = foundUser;
+  sessionUser.loginTime = new Date().toISOString();
 
   try {
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionUser));

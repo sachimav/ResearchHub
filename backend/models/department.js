@@ -14,7 +14,7 @@ const departmentSchema = new mongoose.Schema(
 
     parentDepartment: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Department",
+      ref: "departments",
       default: null,
     },
   },

@@ -1511,9 +1511,9 @@
 .auth-page-wrapper {
   min-height: calc(100vh - 80px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 40px 20px 80px;
+  padding: 36px 20px 80px;
   background: radial-gradient(circle at 10% 20%, rgba(103, 0, 71, 0.04) 0%, transparent 60%),
               radial-gradient(circle at 90% 80%, rgba(212, 175, 55, 0.04) 0%, transparent 60%),
               var(--bg-page);
@@ -1521,7 +1521,7 @@
 
 .auth-card-container {
   width: 100%;
-  max-width: 580px;
+  max-width: 660px;
   margin: 0 auto;
 }
 
@@ -1637,6 +1637,12 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
+}
+
+@media (max-width: 580px) {
+  .auth-role-tabs {
+    grid-template-columns: 1fr;
+  }
 }
 
 .auth-role-btn {
@@ -1806,43 +1812,6 @@
   color: var(--primary-dark);
 }
 
-.auth-demo-hint {
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px dashed rgba(103, 0, 71, 0.15);
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.auth-demo-hint summary {
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--primary);
-  user-select: none;
-}
-
-.demo-credentials-box {
-  background: var(--primary-soft);
-  border: 1px solid var(--primary-border);
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-top: 8px;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--text-body);
-}
-
-.demo-credentials-box p {
-  margin-bottom: 4px;
-}
-
-.demo-note {
-  font-family: var(--font-sans);
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  margin-top: 6px;
-  font-style: italic;
-}
 
 /* ============================================================
    REGISTRATION SUCCESS POPUP MODAL

@@ -61,32 +61,6 @@ const UNIVERSITY_STATS = [
 
 export default function StakeholderPortals() {
   const navigate = useNavigate();
-  const [modalRole, setModalRole] = useState(null); // 'student' | 'supervisor' | null
-  const [regOrEmail, setRegOrEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loginSuccess, setLoginSuccess] = useState(false);
-
-  const handleOpenModal = (role) => {
-    setModalRole(role);
-    setLoginSuccess(false);
-    if (role === 'student') {
-      setRegOrEmail('2021/ICT/042');
-      setPassword('••••••••');
-    } else {
-      setRegOrEmail('dr.kartheepan@vau.ac.lk');
-      setPassword('••••••••');
-    }
-  };
-
-  const handleCloseModal = () => {
-    setModalRole(null);
-    setLoginSuccess(false);
-  };
-
-  const handleLoginSubmit = (e) => {
-    e.preventDefault();
-    setLoginSuccess(true);
-  };
 
   return (
     <section id="portals" className="portals-section">
@@ -162,7 +136,7 @@ export default function StakeholderPortals() {
               <button
                 type="button"
                 className="btn btn-primary btn-block gateway-btn"
-                onClick={() => handleOpenModal('student')}
+                onClick={() => navigate('/login?role=student')}
               >
                 <span>Enter as Student</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -214,7 +188,7 @@ export default function StakeholderPortals() {
               <button
                 type="button"
                 className="btn btn-outline btn-block gateway-btn gateway-btn-supervisor"
-                onClick={() => handleOpenModal('supervisor')}
+                onClick={() => navigate('/login?role=supervisor')}
               >
                 <span>Enter as Supervisor</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -225,104 +199,6 @@ export default function StakeholderPortals() {
           </div>
         </div>
       </div>
-
-      {/* Role SSO Entry Modal */}
-      {modalRole && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
-          <div className="portal-login-modal glass-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title-wrap">
-                <span className="badge-pill badge-plum">University of Vavuniya SSO</span>
-                <h3 className="modal-title">
-                  {modalRole === 'student' ? 'Student Portal Access' : 'Supervisor Portal Access'}
-                </h3>
-              </div>
-              <button type="button" className="modal-close-btn" onClick={handleCloseModal}>
-                ✕
-              </button>
-            </div>
-
-            <div className="modal-role-switcher">
-              <button
-                type="button"
-                className={`role-switch-btn ${modalRole === 'student' ? 'active' : ''}`}
-                onClick={() => handleOpenModal('student')}
-              >
-                Student
-              </button>
-              <button
-                type="button"
-                className={`role-switch-btn ${modalRole === 'supervisor' ? 'active' : ''}`}
-                onClick={() => handleOpenModal('supervisor')}
-              >
-                Supervisor
-              </button>
-            </div>
-
-            {loginSuccess ? (
-              <div className="login-success-state">
-                <div className="success-icon-bubble">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
-                <h4 className="success-title">Authentication Successful!</h4>
-                <p className="success-message">
-                  Welcome to the {modalRole === 'student' ? 'Student Research Portal' : 'Faculty Supervisor Portal'}. Your session is verified with the University of Vavuniya SSO.
-                </p>
-                <button type="button" className="btn btn-primary" onClick={handleCloseModal}>
-                  Enter Dashboard
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleLoginSubmit} className="portal-login-form">
-                <div className="form-group">
-                  <label className="input-label" htmlFor="userIdentifier">
-                    {modalRole === 'student' ? 'Registration Number' : 'Institutional Email / Staff ID'}
-                  </label>
-                  <input
-                    id="userIdentifier"
-                    type="text"
-                    className="topic-input form-input-styled"
-                    value={regOrEmail}
-                    onChange={(e) => setRegOrEmail(e.target.value)}
-                    required
-                  />
-                  <span className="input-helper">
-                    {modalRole === 'student' ? 'e.g. 2021/ICT/042' : 'e.g. name@vau.ac.lk'}
-                  </span>
-                </div>
-
-                <div className="form-group">
-                  <label className="input-label" htmlFor="userPassword">
-                    SSO Password
-                  </label>
-                  <input
-                    id="userPassword"
-                    type="password"
-                    className="topic-input form-input-styled"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="modal-btn-row">
-                  <button type="submit" className="btn btn-primary btn-block">
-                    <span>Proceed as {modalRole === 'student' ? 'Student' : 'Supervisor'}</span>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                  <button type="button" className="btn btn-glass" onClick={handleCloseModal}>
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
     </section>
   );
 }

@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import projectLogo from '../assets/logo.png';
 import {
   registerUser,
   loginUser,
   isValidEmail,
-  emailExists
+  emailExists,
+  regNoExists,
+  DEPARTMENTS,
+  BATCHES,
+  DEGREE_PROGRAMS,
+  SUPERVISOR_DESIGNATIONS
 } from '../services/authService';
 
 export default function AuthPage({ initialMode = 'login' }) {
@@ -18,23 +22,30 @@ export default function AuthPage({ initialMode = 'login' }) {
     urlMode === 'register' || initialMode === 'register' ? 'register' : 'login'
   );
 
-  // Role: 'student' | 'public' | 'supervisor'
+  // Role: 'student' | 'supervisor' | 'public'
   const urlRole = searchParams.get('role');
+  const validRoles = ['student', 'supervisor', 'public'];
   const [selectedRole, setSelectedRole] = useState(
-    urlRole === 'supervisor' || urlRole === 'public' || urlRole === 'student'
-      ? urlRole
-      : 'student'
+    validRoles.includes(urlRole) ? urlRole : 'student'
   );
 
-  // Form Fields State
+  // Form Fields State matching Database Models
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    institution: '',
-    designation: '',
-    phone: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    // Student model fields (Student.js)
+    regNo: '',
+    department: '',
+    batch: '',
+    program: '',
+    // Supervisor model fields (supervisor.js)
+    designation: '',
+    expertise: '',
+    // Public User model fields (user.js extended)
+    institution: '',
+    phone: ''
   });
 
   // Validation errors & submission message states
@@ -44,25 +55,26 @@ export default function AuthPage({ initialMode = 'login' }) {
   const [registeredUserInfo, setRegisteredUserInfo] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset or adjust form on role or mode change
+  // Clear errors when changing mode or role
   useEffect(() => {
     setErrors({});
     setServerError('');
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [authMode, selectedRole]);
 
-  // Keep state synced with query params if they change
+  // Keep state synced with query params and ensure page starts from top
   useEffect(() => {
     if (urlMode === 'register' || urlMode === 'login') {
       setAuthMode(urlMode);
     }
-    if (urlRole === 'student' || urlRole === 'public' || urlRole === 'supervisor') {
+    if (validRoles.includes(urlRole)) {
       setSelectedRole(urlRole);
     }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [urlMode, urlRole]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear inline error for this field
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
@@ -71,52 +83,89 @@ export default function AuthPage({ initialMode = 'login' }) {
     }
   };
 
-  // Field validation
+  // Comprehensive validation strictly conforming to Database Models
   const validateForm = () => {
     const errs = {};
 
-    // Validate email
+    // Validate email (required in user.js)
     if (!formData.email.trim()) {
-      errs.email = 'User Email is required';
+      errs.email = 'Email address is required.';
     } else if (!isValidEmail(formData.email)) {
-      errs.email = 'Please enter a valid email address (e.g. name@domain.com)';
+      errs.email = 'Please enter a valid email address.';
     }
 
-    // Validate password
+    // Validate password (required in user.js)
     if (!formData.password) {
-      errs.password = 'Password is required';
+      errs.password = 'Password is required.';
     } else if (formData.password.length < 6) {
-      errs.password = 'Password must be at least 6 characters';
+      errs.password = 'Password must be at least 6 characters.';
     }
 
-    // Registration specific validations
+    // Registration specific validations matching Mongoose models
     if (authMode === 'register') {
+      // Name (required in user.js)
       if (!formData.name.trim()) {
-        errs.name = 'Name is required';
+        errs.name = 'Full Name is required.';
       }
 
+      // Password Confirmation
       if (!formData.confirmPassword) {
-        errs.confirmPassword = 'Confirm Password is required';
+        errs.confirmPassword = 'Confirm Password is required.';
       } else if (formData.password !== formData.confirmPassword) {
-        errs.confirmPassword = 'Password and Confirm Password do not match';
+        errs.confirmPassword = 'Password and Confirm Password do not match.';
       }
 
-      // Public User specific registration fields
-      if (selectedRole === 'public') {
-        if (!formData.institution.trim()) {
-          errs.institution = 'Institution is required';
-        }
-        if (!formData.designation.trim()) {
-          errs.designation = 'Designation is required';
-        }
-        if (!formData.phone.trim()) {
-          errs.phone = 'Phone Number is required';
-        }
-      }
-
-      // Duplicate email check
+      // Duplicate email check (unique in user.js)
       if (formData.email.trim() && isValidEmail(formData.email) && emailExists(formData.email)) {
         errs.email = 'An account with this email already exists. Please login.';
+      }
+
+      // ── Role: Student (models/Student.js) ──
+      if (selectedRole === 'student') {
+        const regNo = (formData.regNo || '').trim().toUpperCase();
+        if (!regNo) {
+          errs.regNo = 'Student Registration Number (e.g. 2020/ICT/042) is required.';
+        } else if (regNoExists(regNo)) {
+          errs.regNo = `Registration Number "${regNo}" is already registered.`;
+        }
+
+        if (!formData.department.trim()) {
+          errs.department = 'Academic Department is required.';
+        }
+
+        if (!formData.batch.trim()) {
+          errs.batch = 'Academic Batch / Year is required.';
+        }
+
+        if (!formData.program.trim()) {
+          errs.program = 'Degree Program is required.';
+        }
+      }
+
+      // ── Role: Supervisor (models/supervisor.js) ──
+      if (selectedRole === 'supervisor') {
+        if (!formData.designation.trim()) {
+          errs.designation = 'Academic Designation is required.';
+        }
+        if (!formData.department.trim()) {
+          errs.department = 'Academic Department is required.';
+        }
+        if (!formData.expertise.trim()) {
+          errs.expertise = 'Research Expertise / Specialization is required.';
+        }
+      }
+
+      // ── Role: Public / Industry User (models/user.js) ──
+      if (selectedRole === 'public') {
+        if (!formData.institution.trim()) {
+          errs.institution = 'Institution / Organization is required.';
+        }
+        if (!formData.designation.trim()) {
+          errs.designation = 'Designation / Job Title is required.';
+        }
+        if (!formData.phone.trim()) {
+          errs.phone = 'Phone Number is required.';
+        }
       }
     }
 
@@ -137,23 +186,16 @@ export default function AuthPage({ initialMode = 'login' }) {
 
     try {
       if (authMode === 'register') {
-        // Perform registration
+        // Register user with schema-aligned attributes
         const result = registerUser(selectedRole, formData);
         if (result.success) {
-          setRegisteredUserInfo({
-            name: formData.name,
-            email: formData.email,
-            role: selectedRole
-          });
+          setRegisteredUserInfo(result.user);
           setShowSuccessPopup(true);
-          // Reset form fields
+          // Reset sensitive fields
           setFormData((prev) => ({
             ...prev,
             password: '',
-            confirmPassword: '',
-            phone: '',
-            institution: '',
-            designation: ''
+            confirmPassword: ''
           }));
         } else {
           setServerError(result.error);
@@ -162,16 +204,12 @@ export default function AuthPage({ initialMode = 'login' }) {
         // Perform login
         const result = loginUser(selectedRole, formData.email, formData.password);
         if (result.success) {
-          // Role-based Navigation as per requirements:
-          // - Student -> Navigate to the Student Portal.
-          // - Public User -> Navigate to the Research Showcase page.
-          // - Supervisor -> Navigate to the Supervisor Portal.
-          if (selectedRole === 'student') {
-            navigate('/student-portal');
-          } else if (selectedRole === 'public') {
+          // Role-based Navigation or return to redirected page
+          const redirectPath = searchParams.get('redirect');
+          if (redirectPath) {
+            navigate(redirectPath);
+          } else {
             navigate('/showcase');
-          } else if (selectedRole === 'supervisor') {
-            navigate('/supervisor-portal');
           }
         } else {
           setServerError(result.error);
@@ -194,10 +232,10 @@ export default function AuthPage({ initialMode = 'login' }) {
     switch (role) {
       case 'student':
         return 'Student';
-      case 'public':
-        return 'Public User';
       case 'supervisor':
         return 'Supervisor';
+      case 'public':
+        return 'Public User';
       default:
         return 'User';
     }
@@ -218,22 +256,15 @@ export default function AuthPage({ initialMode = 'login' }) {
 
         {/* Main Glass Card */}
         <div className="auth-main-card glass-card">
-          {/* Header with Project Logo */}
+          {/* Header */}
           <div className="auth-header">
-            <Link to="/" className="auth-logo-link" title="ResearchHub - University of Vavuniya">
-              <img
-                src={projectLogo}
-                alt="ResearchHub Logo"
-                className="auth-project-logo"
-              />
-            </Link>
-            <h1 className="auth-title">ResearchHub Authentication</h1>
+            <h1 className="auth-title">ResearchHub</h1>
             <p className="auth-subtitle">
-              University of Vavuniya Research Project Management System
+              University of Vavuniya Research Management System
             </p>
           </div>
 
-          {/* Mode Switcher: Login / Register */}
+          {/* Mode Switcher: Sign In / Register */}
           <div className="auth-mode-toggle">
             <button
               type="button"
@@ -253,9 +284,8 @@ export default function AuthPage({ initialMode = 'login' }) {
             </button>
           </div>
 
-          {/* Role Switcher: Student | Public User | Supervisor */}
+          {/* Role Switcher: Student | Supervisor | Public User */}
           <div className="auth-role-tabs-wrap">
-            <span className="auth-role-label">Select User Role:</span>
             <div className="auth-role-tabs">
               <button
                 type="button"
@@ -269,16 +299,6 @@ export default function AuthPage({ initialMode = 'login' }) {
 
               <button
                 type="button"
-                id="role-public-btn"
-                className={`auth-role-btn ${selectedRole === 'public' ? 'active' : ''}`}
-                onClick={() => setSelectedRole('public')}
-              >
-                <span className="role-icon">👥</span>
-                <span className="role-title">Public User</span>
-              </button>
-
-              <button
-                type="button"
                 id="role-supervisor-btn"
                 className={`auth-role-btn ${selectedRole === 'supervisor' ? 'active' : ''}`}
                 onClick={() => setSelectedRole('supervisor')}
@@ -286,21 +306,43 @@ export default function AuthPage({ initialMode = 'login' }) {
                 <span className="role-icon">👨‍🏫</span>
                 <span className="role-title">Supervisor</span>
               </button>
+
+              <button
+                type="button"
+                id="role-public-btn"
+                className={`auth-role-btn ${selectedRole === 'public' ? 'active' : ''}`}
+                onClick={() => setSelectedRole('public')}
+              >
+                <span className="role-icon">👥</span>
+                <span className="role-title">Public User</span>
+              </button>
             </div>
           </div>
 
           {/* Dynamic Title for Current Selection */}
           <div className="auth-form-heading">
             <h2 className="auth-form-title">
-              {authMode === 'login' ? 'Login as' : 'Register as'}{' '}
+              {authMode === 'login' ? 'Sign In as' : 'Register as'}{' '}
               <span className="highlight-role">{getRoleDisplayName(selectedRole)}</span>
             </h2>
             <p className="auth-form-desc">
               {authMode === 'login'
-                ? `Enter your registered email and password to access the ${getRoleDisplayName(selectedRole)} portal.`
-                : `Create your verified ${getRoleDisplayName(selectedRole)} account to get started.`}
+                ? `Enter your registered credentials to access the ${getRoleDisplayName(selectedRole)} workspace.`
+                : `Create your verified ${getRoleDisplayName(selectedRole)} account matching University academic records.`}
             </p>
           </div>
+
+          {/* Message Prompt when redirected from showcase */}
+          {searchParams.get('message') === 'login_required' && (
+            <div className="auth-alert" style={{ background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0284c7', display: 'flex', alignItems: 'center', gap: '10px' }} role="status">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span>Please sign in or register to view full research abstracts and details.</span>
+            </div>
+          )}
 
           {/* Global Server / Validation Alert */}
           {serverError && (
@@ -316,104 +358,257 @@ export default function AuthPage({ initialMode = 'login' }) {
 
           {/* Authentication Form */}
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
-            {/* === Registration Fields: Name (For Student, Public User, Supervisor) === */}
+            {/* ========================================================
+                REGISTRATION FIELDS (Tailored strictly to DB Models)
+               ======================================================== */}
             {authMode === 'register' && (
-              <div className="form-group">
-                <label className="input-label" htmlFor="auth-name">
-                  Name <span className="field-required">*</span>
-                </label>
-                <input
-                  id="auth-name"
-                  type="text"
-                  className={`form-input-styled ${errors.name ? 'input-error' : ''}`}
-                  placeholder={
-                    selectedRole === 'supervisor'
-                      ? 'e.g. Dr. T. Kartheepan'
-                      : selectedRole === 'student'
-                      ? 'e.g. S. Mithun'
-                      : 'e.g. Dr. Anura Perera'
-                  }
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  autoComplete="name"
-                />
-                {errors.name && <span className="error-text">{errors.name}</span>}
-              </div>
-            )}
-
-            {/* === Public User Registration Specific Fields: Institution, Designation, Phone === */}
-            {authMode === 'register' && selectedRole === 'public' && (
               <>
-                <div className="form-row-dual">
-                  <div className="form-group">
-                    <label className="input-label" htmlFor="auth-institution">
-                      Institution <span className="field-required">*</span>
-                    </label>
-                    <input
-                      id="auth-institution"
-                      type="text"
-                      className={`form-input-styled ${errors.institution ? 'input-error' : ''}`}
-                      placeholder="e.g. AgriTech Lanka PLC / Company"
-                      value={formData.institution}
-                      onChange={(e) => handleInputChange('institution', e.target.value)}
-                    />
-                    {errors.institution && (
-                      <span className="error-text">{errors.institution}</span>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label className="input-label" htmlFor="auth-designation">
-                      Designation <span className="field-required">*</span>
-                    </label>
-                    <input
-                      id="auth-designation"
-                      type="text"
-                      className={`form-input-styled ${errors.designation ? 'input-error' : ''}`}
-                      placeholder="e.g. Senior Research Analyst"
-                      value={formData.designation}
-                      onChange={(e) => handleInputChange('designation', e.target.value)}
-                    />
-                    {errors.designation && (
-                      <span className="error-text">{errors.designation}</span>
-                    )}
-                  </div>
-                </div>
-
+                {/* Full Name (All Roles -> user.js: name) */}
                 <div className="form-group">
-                  <label className="input-label" htmlFor="auth-phone">
-                    Phone Number <span className="field-required">*</span>
+                  <label className="input-label" htmlFor="auth-name">
+                    Full Name <span className="field-required">*</span>
                   </label>
                   <input
-                    id="auth-phone"
-                    type="tel"
-                    className={`form-input-styled ${errors.phone ? 'input-error' : ''}`}
-                    placeholder="e.g. +94 77 123 4567"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    autoComplete="tel"
+                    id="auth-name"
+                    type="text"
+                    className={`form-input-styled ${errors.name ? 'input-error' : ''}`}
+                    placeholder="Enter full name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    autoComplete="name"
                   />
-                  {errors.phone && <span className="error-text">{errors.phone}</span>}
+                  {errors.name && <span className="error-text">{errors.name}</span>}
                 </div>
+
+                {/* ── STUDENT SPECIFIC FIELDS (models/Student.js) ── */}
+                {selectedRole === 'student' && (
+                  <>
+                    <div className="form-row-dual">
+                      {/* regNo (unique in Student.js) */}
+                      <div className="form-group">
+                        <label className="input-label" htmlFor="auth-regno">
+                          Registration / Index No <span className="field-required">*</span>
+                        </label>
+                        <input
+                          id="auth-regno"
+                          type="text"
+                          className={`form-input-styled ${errors.regNo ? 'input-error' : ''}`}
+                          placeholder="e.g. 2020/ICT/042"
+                          value={formData.regNo}
+                          onChange={(e) => handleInputChange('regNo', e.target.value.toUpperCase())}
+                        />
+                        {errors.regNo && <span className="error-text">{errors.regNo}</span>}
+                        <span className="input-helper">University Index / Registration Number</span>
+                      </div>
+
+                      {/* batchId / batch (ref: batch in Student.js) */}
+                      <div className="form-group">
+                        <label className="input-label" htmlFor="auth-batch">
+                          Academic Batch / Year <span className="field-required">*</span>
+                        </label>
+                        <select
+                          id="auth-batch"
+                          className={`form-input-styled ${errors.batch ? 'input-error' : ''}`}
+                          value={formData.batch}
+                          onChange={(e) => handleInputChange('batch', e.target.value)}
+                        >
+                          <option value="">Select Academic Batch...</option>
+                          {BATCHES.map((b) => (
+                            <option key={b} value={b}>
+                              Batch {b}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.batch && <span className="error-text">{errors.batch}</span>}
+                      </div>
+                    </div>
+
+                    {/* departmentId / department (ref: departments in Student.js) */}
+                    <div className="form-group">
+                      <label className="input-label" htmlFor="auth-department">
+                        Academic Department <span className="field-required">*</span>
+                      </label>
+                      <select
+                        id="auth-department"
+                        className={`form-input-styled ${errors.department ? 'input-error' : ''}`}
+                        value={formData.department}
+                        onChange={(e) => handleInputChange('department', e.target.value)}
+                      >
+                        <option value="">Select Department...</option>
+                        {DEPARTMENTS.map((dept) => (
+                          <option key={dept} value={dept}>
+                            {dept}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.department && <span className="error-text">{errors.department}</span>}
+                    </div>
+
+                    {/* program (required string in Student.js) */}
+                    <div className="form-group">
+                      <label className="input-label" htmlFor="auth-program">
+                        Degree Program <span className="field-required">*</span>
+                      </label>
+                      <select
+                        id="auth-program"
+                        className={`form-input-styled ${errors.program ? 'input-error' : ''}`}
+                        value={formData.program}
+                        onChange={(e) => handleInputChange('program', e.target.value)}
+                      >
+                        <option value="">Select Degree Program...</option>
+                        {DEGREE_PROGRAMS.map((prog) => (
+                          <option key={prog} value={prog}>
+                            {prog}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.program && <span className="error-text">{errors.program}</span>}
+                    </div>
+                  </>
+                )}
+
+                {/* ── SUPERVISOR SPECIFIC FIELDS (models/supervisor.js) ── */}
+                {selectedRole === 'supervisor' && (
+                  <>
+                    <div className="form-row-dual">
+                      {/* designation (supervisor.js: designation) */}
+                      <div className="form-group">
+                        <label className="input-label" htmlFor="auth-sup-designation">
+                          Academic Designation <span className="field-required">*</span>
+                        </label>
+                        <select
+                          id="auth-sup-designation"
+                          className={`form-input-styled ${errors.designation ? 'input-error' : ''}`}
+                          value={formData.designation}
+                          onChange={(e) => handleInputChange('designation', e.target.value)}
+                        >
+                          <option value="">Select Designation...</option>
+                          {SUPERVISOR_DESIGNATIONS.map((desig) => (
+                            <option key={desig} value={desig}>
+                              {desig}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.designation && (
+                          <span className="error-text">{errors.designation}</span>
+                        )}
+                      </div>
+
+                      {/* departmentId / department (ref: departments in supervisor.js) */}
+                      <div className="form-group">
+                        <label className="input-label" htmlFor="auth-sup-dept">
+                          Department <span className="field-required">*</span>
+                        </label>
+                        <select
+                          id="auth-sup-dept"
+                          className={`form-input-styled ${errors.department ? 'input-error' : ''}`}
+                          value={formData.department}
+                          onChange={(e) => handleInputChange('department', e.target.value)}
+                        >
+                          <option value="">Select Department...</option>
+                          {DEPARTMENTS.map((dept) => (
+                            <option key={dept} value={dept}>
+                              {dept}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.department && (
+                          <span className="error-text">{errors.department}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* expertise (supervisor.js: expertise array) */}
+                    <div className="form-group">
+                      <label className="input-label" htmlFor="auth-expertise">
+                        Research Expertise &amp; Specialization <span className="field-required">*</span>
+                      </label>
+                      <input
+                        id="auth-expertise"
+                        type="text"
+                        className={`form-input-styled ${errors.expertise ? 'input-error' : ''}`}
+                        placeholder="e.g. Artificial Intelligence, Computer Vision, Edge Computing"
+                        value={formData.expertise}
+                        onChange={(e) => handleInputChange('expertise', e.target.value)}
+                      />
+                      {errors.expertise && <span className="error-text">{errors.expertise}</span>}
+                      <span className="input-helper">Comma-separated research domains &amp; specializations</span>
+                    </div>
+                  </>
+                )}
+
+                {/* ── PUBLIC USER SPECIFIC FIELDS (models/user.js extended) ── */}
+                {selectedRole === 'public' && (
+                  <>
+                    <div className="form-row-dual">
+                      <div className="form-group">
+                        <label className="input-label" htmlFor="auth-institution">
+                          Organization / Company <span className="field-required">*</span>
+                        </label>
+                        <input
+                          id="auth-institution"
+                          type="text"
+                          className={`form-input-styled ${errors.institution ? 'input-error' : ''}`}
+                          placeholder="e.g. AgriTech Lanka PLC"
+                          value={formData.institution}
+                          onChange={(e) => handleInputChange('institution', e.target.value)}
+                        />
+                        {errors.institution && (
+                          <span className="error-text">{errors.institution}</span>
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label className="input-label" htmlFor="auth-designation">
+                          Designation / Title <span className="field-required">*</span>
+                        </label>
+                        <input
+                          id="auth-designation"
+                          type="text"
+                          className={`form-input-styled ${errors.designation ? 'input-error' : ''}`}
+                          placeholder="e.g. Lead Research Scientist"
+                          value={formData.designation}
+                          onChange={(e) => handleInputChange('designation', e.target.value)}
+                        />
+                        {errors.designation && (
+                          <span className="error-text">{errors.designation}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="input-label" htmlFor="auth-phone">
+                        Contact Phone Number <span className="field-required">*</span>
+                      </label>
+                      <input
+                        id="auth-phone"
+                        type="tel"
+                        className={`form-input-styled ${errors.phone ? 'input-error' : ''}`}
+                        placeholder="e.g. +94 77 123 4567"
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        autoComplete="tel"
+                      />
+                      {errors.phone && <span className="error-text">{errors.phone}</span>}
+                    </div>
+                  </>
+                )}
               </>
             )}
 
-            {/* === User Email (All Roles & Both Modes) === */}
+            {/* ========================================================
+                COMMON CREDENTIALS (Email & Password)
+               ======================================================== */}
+            {/* User Email (user.js: email) */}
             <div className="form-group">
               <label className="input-label" htmlFor="auth-email">
-                User Email <span className="field-required">*</span>
+                Email Address <span className="field-required">*</span>
               </label>
               <input
                 id="auth-email"
                 type="email"
                 className={`form-input-styled ${errors.email ? 'input-error' : ''}`}
-                placeholder={
-                  selectedRole === 'student'
-                    ? 'e.g. student@vau.ac.lk'
-                    : selectedRole === 'supervisor'
-                    ? 'e.g. supervisor@vau.ac.lk'
-                    : 'e.g. user@organization.com'
-                }
+                placeholder="Enter email address"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 autoComplete="email"
@@ -423,12 +618,12 @@ export default function AuthPage({ initialMode = 'login' }) {
                 {selectedRole === 'student'
                   ? 'University student email address'
                   : selectedRole === 'supervisor'
-                  ? 'Faculty or institutional staff email'
-                  : 'Valid professional or personal email'}
+                    ? 'Faculty or academic staff email address'
+                    : 'Valid email address'}
               </span>
             </div>
 
-            {/* === Password (All Roles & Both Modes) === */}
+            {/* Password (user.js: password) */}
             <div className="form-group">
               <label className="input-label" htmlFor="auth-password">
                 Password <span className="field-required">*</span>
@@ -437,7 +632,7 @@ export default function AuthPage({ initialMode = 'login' }) {
                 id="auth-password"
                 type="password"
                 className={`form-input-styled ${errors.password ? 'input-error' : ''}`}
-                placeholder="Enter password (min. 6 characters)"
+                placeholder="Enter password (minimum 6 characters)"
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
                 autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
@@ -445,7 +640,7 @@ export default function AuthPage({ initialMode = 'login' }) {
               {errors.password && <span className="error-text">{errors.password}</span>}
             </div>
 
-            {/* === Confirm Password (All Roles, Registration Only) === */}
+            {/* Confirm Password (Registration Only) */}
             {authMode === 'register' && (
               <div className="form-group">
                 <label className="input-label" htmlFor="auth-confirm-password">
@@ -478,8 +673,8 @@ export default function AuthPage({ initialMode = 'login' }) {
                   {isSubmitting
                     ? 'Processing...'
                     : authMode === 'login'
-                    ? `Sign In as ${getRoleDisplayName(selectedRole)}`
-                    : `Complete ${getRoleDisplayName(selectedRole)} Registration`}
+                      ? `Sign In as ${getRoleDisplayName(selectedRole)}`
+                      : `Complete ${getRoleDisplayName(selectedRole)} Registration`}
                 </span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M5 12h14M12 5l7 7-7 7" />
@@ -514,26 +709,12 @@ export default function AuthPage({ initialMode = 'login' }) {
               )}
             </div>
           </form>
-
-          {/* Quick Demo Credentials Info for Evaluation */}
-          <div className="auth-demo-hint">
-            <details>
-              <summary>Need demo credentials for instant testing?</summary>
-              <div className="demo-credentials-box">
-                <p><strong>Student:</strong> student@vau.ac.lk / password123</p>
-                <p><strong>Supervisor:</strong> supervisor@vau.ac.lk / password123</p>
-                <p><strong>Public User:</strong> anura.perera@agritech.lk / password123</p>
-                <p className="demo-note">Or register a brand new account with any valid email!</p>
-              </div>
-            </details>
-          </div>
         </div>
       </div>
 
       {/* ============================================================
           POPUP MODAL: "Successfully Registered"
-          Explicit requirement: After successful registration:
-          Show a popup message: "Successfully Registered"
+          Displays complete DB schema-aligned attributes
          ============================================================ */}
       {showSuccessPopup && (
         <div className="modal-overlay" onClick={handleCloseSuccessPopup}>
@@ -557,7 +738,7 @@ export default function AuthPage({ initialMode = 'login' }) {
             </h3>
 
             <p className="popup-desc">
-              Your account has been created successfully as a{' '}
+              Your academic profile has been created and verified in ResearchHub as a{' '}
               <strong>{getRoleDisplayName(registeredUserInfo?.role)}</strong>.
             </p>
 
@@ -576,6 +757,64 @@ export default function AuthPage({ initialMode = 'login' }) {
                   {getRoleDisplayName(registeredUserInfo?.role)}
                 </span>
               </div>
+
+              {/* Student Model Attributes */}
+              {registeredUserInfo?.role === 'student' && (
+                <>
+                  <div className="popup-detail-row">
+                    <span className="detail-label">Reg No:</span>
+                    <span className="detail-value font-mono"><strong>{registeredUserInfo?.regNo}</strong></span>
+                  </div>
+                  <div className="popup-detail-row">
+                    <span className="detail-label">Program:</span>
+                    <span className="detail-value">{registeredUserInfo?.program}</span>
+                  </div>
+                  <div className="popup-detail-row">
+                    <span className="detail-label">Department:</span>
+                    <span className="detail-value">{registeredUserInfo?.department}</span>
+                  </div>
+                  <div className="popup-detail-row">
+                    <span className="detail-label">Batch:</span>
+                    <span className="detail-value">Batch {registeredUserInfo?.batch}</span>
+                  </div>
+                </>
+              )}
+
+              {/* Supervisor Model Attributes */}
+              {registeredUserInfo?.role === 'supervisor' && (
+                <>
+                  <div className="popup-detail-row">
+                    <span className="detail-label">Designation:</span>
+                    <span className="detail-value"><strong>{registeredUserInfo?.designation}</strong></span>
+                  </div>
+                  <div className="popup-detail-row">
+                    <span className="detail-label">Department:</span>
+                    <span className="detail-value">{registeredUserInfo?.department}</span>
+                  </div>
+                  <div className="popup-detail-row">
+                    <span className="detail-label">Expertise:</span>
+                    <span className="detail-value">{registeredUserInfo?.expertise}</span>
+                  </div>
+                </>
+              )}
+
+              {/* Public User Attributes */}
+              {registeredUserInfo?.role === 'public' && (
+                <>
+                  <div className="popup-detail-row">
+                    <span className="detail-label">Organization:</span>
+                    <span className="detail-value">{registeredUserInfo?.institution}</span>
+                  </div>
+                  <div className="popup-detail-row">
+                    <span className="detail-label">Designation:</span>
+                    <span className="detail-value">{registeredUserInfo?.designation}</span>
+                  </div>
+                  <div className="popup-detail-row">
+                    <span className="detail-label">Phone:</span>
+                    <span className="detail-value">{registeredUserInfo?.phone}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="popup-actions">

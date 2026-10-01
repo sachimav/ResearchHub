@@ -38,4 +38,4 @@ const supervisorSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.model("Supervisors", supervisorSchema);
+export default mongoose.model("supervisors", supervisorSchema);
