@@ -51,12 +51,6 @@ export default function Navbar() {
     }
   };
 
-  const getPortalRoute = (role) => {
-    if (role === 'student') return '/student-portal';
-    if (role === 'supervisor') return '/supervisor-portal';
-    return '/showcase';
-  };
-
   const handleLogout = () => {
     logoutUser();
     navigate('/');
@@ -103,8 +97,7 @@ export default function Navbar() {
             <div className="nav-actions">
               {currentUser ? (
                 <div className="nav-user-logged">
-                  <Link
-                    to={getPortalRoute(currentUser.role)}
+                  <div
                     className="nav-user-chip"
                     title={`Logged in as ${currentUser.name}`}
                   >
@@ -112,7 +105,7 @@ export default function Navbar() {
                       {currentUser.role === 'student' ? '🎓' : currentUser.role === 'supervisor' ? '👨‍🏫' : '👥'}
                     </span>
                     <span className="user-chip-name">{currentUser.name}</span>
-                  </Link>
+                  </div>
                   <button
                     type="button"
                     className="btn btn-outline btn-sm logout-nav-btn"

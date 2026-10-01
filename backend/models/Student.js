@@ -13,6 +13,8 @@ const studentSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      trim: true,
+      uppercase: true,
     },
 
     departmentId: {
@@ -30,6 +32,7 @@ const studentSchema = new mongoose.Schema(
     program: {
       type: String,
       required: true,
+      trim: true,
     },
   },
   {
