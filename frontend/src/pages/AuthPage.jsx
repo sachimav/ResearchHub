@@ -52,6 +52,7 @@ export default function AuthPage({ initialMode = 'login' }) {
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successPopupMode, setSuccessPopupMode] = useState('register');
   const [registeredUserInfo, setRegisteredUserInfo] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -174,7 +175,7 @@ export default function AuthPage({ initialMode = 'login' }) {
   };
 
   // Submit Handler
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError('');
 
@@ -186,12 +187,33 @@ export default function AuthPage({ initialMode = 'login' }) {
 
     try {
       if (authMode === 'register') {
-        // Register user with schema-aligned attributes
-        const result = registerUser(selectedRole, formData);
+        const result = await registerUser(selectedRole, formData);
+
         if (result.success) {
-          setRegisteredUserInfo(result.user);
+          const userInfo = {
+            ...result.user,
+            role: selectedRole,
+            ...(selectedRole === 'student' && {
+              regNo: formData.regNo,
+              department: formData.department,
+              batch: formData.batch,
+              program: formData.program,
+            }),
+            ...(selectedRole === 'supervisor' && {
+              designation: formData.designation,
+              department: formData.department,
+              expertise: formData.expertise,
+            }),
+            ...(selectedRole === 'public' && {
+              institution: formData.institution,
+              designation: formData.designation,
+              phone: formData.phone,
+            }),
+          };
+
+          setRegisteredUserInfo(userInfo);
+          setSuccessPopupMode('register');
           setShowSuccessPopup(true);
-          // Reset sensitive fields
           setFormData((prev) => ({
             ...prev,
             password: '',
@@ -201,16 +223,18 @@ export default function AuthPage({ initialMode = 'login' }) {
           setServerError(result.error);
         }
       } else {
-        // Perform login
-        const result = loginUser(selectedRole, formData.email, formData.password);
+        const result = await loginUser(selectedRole, formData.email, formData.password);
+
         if (result.success) {
-          // Role-based Navigation or return to redirected page
-          const redirectPath = searchParams.get('redirect');
-          if (redirectPath) {
-            navigate(redirectPath);
-          } else {
-            navigate('/showcase');
-          }
+          const userInfo = {
+            ...result.user,
+            ...(result.profile || {}),
+            role: selectedRole,
+          };
+
+          setRegisteredUserInfo(userInfo);
+          setSuccessPopupMode('login');
+          setShowSuccessPopup(true);
         } else {
           setServerError(result.error);
         }
@@ -224,8 +248,15 @@ export default function AuthPage({ initialMode = 'login' }) {
 
   const handleCloseSuccessPopup = () => {
     setShowSuccessPopup(false);
-    // Switch to Login tab with pre-filled email
+
+    if (successPopupMode === 'login') {
+      const redirectPath = searchParams.get('redirect');
+      navigate(redirectPath || '/showcase');
+      return;
+    }
+
     setAuthMode('login');
+    setRegisteredUserInfo(null);
   };
 
   const getRoleDisplayName = (role) => {
@@ -734,12 +765,13 @@ export default function AuthPage({ initialMode = 'login' }) {
             </div>
 
             <h3 id="popup-title" className="popup-title">
-              Successfully Registered
+              {successPopupMode === 'login' ? 'Login Successful' : 'Successfully Registered'}
             </h3>
 
             <p className="popup-desc">
-              Your academic profile has been created and verified in ResearchHub as a{' '}
-              <strong>{getRoleDisplayName(registeredUserInfo?.role)}</strong>.
+              {successPopupMode === 'login'
+                ? `Welcome back, ${getRoleDisplayName(registeredUserInfo?.role)}. Your login was successful.`
+                : `Your academic profile has been created and verified in ResearchHub as a ${getRoleDisplayName(registeredUserInfo?.role)}.`}
             </p>
 
             <div className="popup-details-card">
@@ -758,7 +790,6 @@ export default function AuthPage({ initialMode = 'login' }) {
                 </span>
               </div>
 
-              {/* Student Model Attributes */}
               {registeredUserInfo?.role === 'student' && (
                 <>
                   <div className="popup-detail-row">
@@ -780,7 +811,6 @@ export default function AuthPage({ initialMode = 'login' }) {
                 </>
               )}
 
-              {/* Supervisor Model Attributes */}
               {registeredUserInfo?.role === 'supervisor' && (
                 <>
                   <div className="popup-detail-row">
@@ -798,7 +828,6 @@ export default function AuthPage({ initialMode = 'login' }) {
                 </>
               )}
 
-              {/* Public User Attributes */}
               {registeredUserInfo?.role === 'public' && (
                 <>
                   <div className="popup-detail-row">
@@ -824,7 +853,9 @@ export default function AuthPage({ initialMode = 'login' }) {
                 className="btn btn-primary btn-block"
                 onClick={handleCloseSuccessPopup}
               >
-                <span>Proceed to Login</span>
+                <span>
+                  {successPopupMode === 'login' ? 'Continue to Showcase' : 'Proceed to Login'}
+                </span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
