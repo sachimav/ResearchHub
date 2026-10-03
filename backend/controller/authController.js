@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 import User from "../models/user.js";
 import Student from "../models/Student.js";
@@ -20,13 +21,15 @@ const createToken = (user) =>
     { expiresIn: "7d" }
   );
 
-//auth apis (logins and Reg)
+//reomve password before sending to frontend
 
 const sanitizeUser = (user) => {
   const userObj = user.toObject ? user.toObject() : { ...user };
   const { password, ...safeUser } = userObj;
   return safeUser;
 };
+
+//role based navigate
 
 const getRoleProfile = async (user) => {
   if (!user || !user._id) return {};
@@ -67,43 +70,33 @@ const getRoleProfile = async (user) => {
   return {};
 };
 
-const getOrCreateDepartment = async (departmentName) => {
-  const cleanedName = (departmentName || "").trim();
-
-  if (!cleanedName) {
-    throw new Error("Department is required.");
+const getDepartmentById = async (departmentId) => {
+  if (!mongoose.isValidObjectId(departmentId)) {
+    return null;
   }
 
-  let department = await Department.findOne({ name: cleanedName });
-
-  if (!department) {
-    department = await Department.create({
-      name: cleanedName,
-      description: `${cleanedName} department`,
-    });
-  }
-
-  return department;
+  return Department.findById(departmentId);
 };
 
-const getOrCreateBatch = async (batchValue) => {
-  const cleanedBatch = (batchValue || "").trim();
-
-  if (!cleanedBatch) {
-    throw new Error("Batch is required.");
+const getBatchById = async (batchId) => {
+  if (!mongoose.isValidObjectId(batchId)) {
+    return null;
   }
 
-  let batch = await Batch.findOne({ batchName: cleanedBatch });
+  return Batch.findById(batchId);
+};
 
-  if (!batch) {
-    batch = await Batch.create({
-      batchName: cleanedBatch,
-      academicYear: cleanedBatch,
-      description: `Academic batch ${cleanedBatch}`,
-    });
+export const getRegistrationOptions = async (_req, res) => {
+  try {
+    const [departments, batches] = await Promise.all([
+      Department.find().select("_id name").sort({ name: 1 }),
+      Batch.find().select("_id batchName academicYear").sort({ academicYear: -1 }),
+    ]);
+
+    return res.status(200).json({ departments, batches });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Unable to fetch registration options." });
   }
-
-  return batch;
 };
 
 export const registerUser = async (req, res) => {
@@ -141,6 +134,15 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "Please enter a valid email address." });
     }
 
+    const emailDomain = normalizedEmail.split("@")[1];
+    if (selectedRole === "student" && emailDomain !== "stu.vau.ac.lk") {
+      return res.status(400).json({ message: "Student accounts must use an @stu.vau.ac.lk email address." });
+    }
+
+    if (selectedRole === "supervisor" && emailDomain !== "vau.ac.lk") {
+      return res.status(400).json({ message: "Supervisor accounts must use an @vau.ac.lk email address." });
+    }
+
     if (!password) {
       return res.status(400).json({ message: "Password is required." });
     }
@@ -175,11 +177,11 @@ export const registerUser = async (req, res) => {
         return res.status(409).json({ message: "This student registration number is already registered." });
       }
 
-      if (!department || !department.trim()) {
+      if (typeof department !== "string" || !department.trim()) {
         return res.status(400).json({ message: "Department is required." });
       }
 
-      if (!batch || !batch.trim()) {
+      if (typeof batch !== "string" || !batch.trim()) {
         return res.status(400).json({ message: "Batch is required." });
       }
 
@@ -187,8 +189,18 @@ export const registerUser = async (req, res) => {
         return res.status(400).json({ message: "Program is required." });
       }
 
-      const departmentDoc = await getOrCreateDepartment(department);
-      const batchDoc = await getOrCreateBatch(batch);
+      const [departmentDoc, batchDoc] = await Promise.all([
+        getDepartmentById(department),
+        getBatchById(batch),
+      ]);
+
+      if (!departmentDoc) {
+        return res.status(400).json({ message: "Please select a valid department." });
+      }
+
+      if (!batchDoc) {
+        return res.status(400).json({ message: "Please select a valid batch." });
+      }
 
       const createdUser = await User.create({
         name: name.trim(),
@@ -216,7 +228,7 @@ export const registerUser = async (req, res) => {
     }
 
     if (selectedRole === "supervisor") {
-      if (!department || !department.trim()) {
+      if (typeof department !== "string" || !department.trim()) {
         return res.status(400).json({ message: "Department is required." });
       }
 
@@ -228,7 +240,10 @@ export const registerUser = async (req, res) => {
         return res.status(400).json({ message: "Expertise is required." });
       }
 
-      const departmentDoc = await getOrCreateDepartment(department);
+      const departmentDoc = await getDepartmentById(department);
+      if (!departmentDoc) {
+        return res.status(400).json({ message: "Please select a valid department." });
+      }
       const expertiseList = Array.isArray(expertise)
         ? expertise
         : expertise
