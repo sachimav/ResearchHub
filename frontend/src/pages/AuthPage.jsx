@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   registerUser,
@@ -6,8 +6,7 @@ import {
   isValidEmail,
   emailExists,
   regNoExists,
-  DEPARTMENTS,
-  BATCHES,
+  getRegistrationOptions,
   DEGREE_PROGRAMS,
   SUPERVISOR_DESIGNATIONS
 } from '../services/authService';
@@ -53,8 +52,11 @@ export default function AuthPage({ initialMode = 'login' }) {
   const [serverError, setServerError] = useState('');
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [successPopupMode, setSuccessPopupMode] = useState('register');
-  const [registeredUserInfo, setRegisteredUserInfo] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [registrationOptionsError, setRegistrationOptionsError] = useState('');
+  const [isLoadingRegistrationOptions, setIsLoadingRegistrationOptions] = useState(true);
 
   // Clear errors when changing mode or role
   useEffect(() => {
@@ -62,6 +64,29 @@ export default function AuthPage({ initialMode = 'login' }) {
     setServerError('');
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [authMode, selectedRole]);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    getRegistrationOptions()
+      .then(({ departments: departmentOptions, batches: batchOptions }) => {
+        if (isCurrent) {
+          setDepartments(departmentOptions);
+          setBatches(batchOptions);
+          setIsLoadingRegistrationOptions(false);
+        }
+      })
+      .catch((error) => {
+        if (isCurrent) {
+          setRegistrationOptionsError(error.message);
+          setIsLoadingRegistrationOptions(false);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   // Keep state synced with query params and ensure page starts from top
   useEffect(() => {
@@ -119,6 +144,15 @@ export default function AuthPage({ initialMode = 'login' }) {
       // Duplicate email check (unique in user.js)
       if (formData.email.trim() && isValidEmail(formData.email) && emailExists(formData.email)) {
         errs.email = 'An account with this email already exists. Please login.';
+      }
+
+      if (isValidEmail(formData.email)) {
+        const emailDomain = formData.email.trim().toLowerCase().split('@')[1];
+        if (selectedRole === 'student' && emailDomain !== 'stu.vau.ac.lk') {
+          errs.email = 'Student accounts must use an @stu.vau.ac.lk email address.';
+        } else if (selectedRole === 'supervisor' && emailDomain !== 'vau.ac.lk') {
+          errs.email = 'Supervisor accounts must use an @vau.ac.lk email address.';
+        }
       }
 
       // ── Role: Student (models/Student.js) ──
@@ -190,28 +224,6 @@ export default function AuthPage({ initialMode = 'login' }) {
         const result = await registerUser(selectedRole, formData);
 
         if (result.success) {
-          const userInfo = {
-            ...result.user,
-            role: selectedRole,
-            ...(selectedRole === 'student' && {
-              regNo: formData.regNo,
-              department: formData.department,
-              batch: formData.batch,
-              program: formData.program,
-            }),
-            ...(selectedRole === 'supervisor' && {
-              designation: formData.designation,
-              department: formData.department,
-              expertise: formData.expertise,
-            }),
-            ...(selectedRole === 'public' && {
-              institution: formData.institution,
-              designation: formData.designation,
-              phone: formData.phone,
-            }),
-          };
-
-          setRegisteredUserInfo(userInfo);
           setSuccessPopupMode('register');
           setShowSuccessPopup(true);
           setFormData((prev) => ({
@@ -226,13 +238,6 @@ export default function AuthPage({ initialMode = 'login' }) {
         const result = await loginUser(selectedRole, formData.email, formData.password);
 
         if (result.success) {
-          const userInfo = {
-            ...result.user,
-            ...(result.profile || {}),
-            role: selectedRole,
-          };
-
-          setRegisteredUserInfo(userInfo);
           setSuccessPopupMode('login');
           setShowSuccessPopup(true);
         } else {
@@ -254,9 +259,8 @@ export default function AuthPage({ initialMode = 'login' }) {
       navigate(redirectPath || '/showcase');
       return;
     }
-
     setAuthMode('login');
-    setRegisteredUserInfo(null);
+    setAuthMode('login');
   };
 
   const getRoleDisplayName = (role) => {
@@ -387,6 +391,12 @@ export default function AuthPage({ initialMode = 'login' }) {
             </div>
           )}
 
+          {registrationOptionsError && authMode === 'register' && (
+            <div className="auth-alert auth-alert-error" role="alert">
+              {registrationOptionsError}
+            </div>
+          )}
+
           {/* Authentication Form */}
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
             {/* ========================================================
@@ -442,11 +452,18 @@ export default function AuthPage({ initialMode = 'login' }) {
                           className={`form-input-styled ${errors.batch ? 'input-error' : ''}`}
                           value={formData.batch}
                           onChange={(e) => handleInputChange('batch', e.target.value)}
+                          disabled={isLoadingRegistrationOptions || Boolean(registrationOptionsError)}
                         >
-                          <option value="">Select Academic Batch...</option>
-                          {BATCHES.map((b) => (
-                            <option key={b} value={b}>
-                              Batch {b}
+                          <option value="">
+                            {isLoadingRegistrationOptions
+                              ? 'Loading batches...'
+                              : batches.length
+                                ? 'Select Academic Batch...'
+                                : 'No batches available'}
+                          </option>
+                          {batches.map((batch) => (
+                            <option key={batch._id} value={batch._id}>
+                              Batch {batch.batchName}
                             </option>
                           ))}
                         </select>
@@ -464,11 +481,18 @@ export default function AuthPage({ initialMode = 'login' }) {
                         className={`form-input-styled ${errors.department ? 'input-error' : ''}`}
                         value={formData.department}
                         onChange={(e) => handleInputChange('department', e.target.value)}
+                        disabled={isLoadingRegistrationOptions || Boolean(registrationOptionsError)}
                       >
-                        <option value="">Select Department...</option>
-                        {DEPARTMENTS.map((dept) => (
-                          <option key={dept} value={dept}>
-                            {dept}
+                        <option value="">
+                          {isLoadingRegistrationOptions
+                            ? 'Loading departments...'
+                            : departments.length
+                              ? 'Select Department...'
+                              : 'No departments available'}
+                        </option>
+                        {departments.map((department) => (
+                          <option key={department._id} value={department._id}>
+                            {department.name}
                           </option>
                         ))}
                       </select>
@@ -535,11 +559,18 @@ export default function AuthPage({ initialMode = 'login' }) {
                           className={`form-input-styled ${errors.department ? 'input-error' : ''}`}
                           value={formData.department}
                           onChange={(e) => handleInputChange('department', e.target.value)}
+                          disabled={isLoadingRegistrationOptions || Boolean(registrationOptionsError)}
                         >
-                          <option value="">Select Department...</option>
-                          {DEPARTMENTS.map((dept) => (
-                            <option key={dept} value={dept}>
-                              {dept}
+                          <option value="">
+                            {isLoadingRegistrationOptions
+                              ? 'Loading departments...'
+                              : departments.length
+                                ? 'Select Department...'
+                                : 'No departments available'}
+                          </option>
+                          {departments.map((department) => (
+                            <option key={department._id} value={department._id}>
+                              {department.name}
                             </option>
                           ))}
                         </select>
@@ -765,86 +796,8 @@ export default function AuthPage({ initialMode = 'login' }) {
             </div>
 
             <h3 id="popup-title" className="popup-title">
-              {successPopupMode === 'login' ? 'Login Successful' : 'Successfully Registered'}
+              {successPopupMode === 'login' ? 'Login Successful' : 'Registration Successful'}
             </h3>
-
-            <p className="popup-desc">
-              {successPopupMode === 'login'
-                ? `Welcome back, ${getRoleDisplayName(registeredUserInfo?.role)}. Your login was successful.`
-                : `Your academic profile has been created and verified in ResearchHub as a ${getRoleDisplayName(registeredUserInfo?.role)}.`}
-            </p>
-
-            <div className="popup-details-card">
-              <div className="popup-detail-row">
-                <span className="detail-label">Name:</span>
-                <span className="detail-value">{registeredUserInfo?.name}</span>
-              </div>
-              <div className="popup-detail-row">
-                <span className="detail-label">Email:</span>
-                <span className="detail-value">{registeredUserInfo?.email}</span>
-              </div>
-              <div className="popup-detail-row">
-                <span className="detail-label">Role:</span>
-                <span className="badge-pill badge-plum">
-                  {getRoleDisplayName(registeredUserInfo?.role)}
-                </span>
-              </div>
-
-              {registeredUserInfo?.role === 'student' && (
-                <>
-                  <div className="popup-detail-row">
-                    <span className="detail-label">Reg No:</span>
-                    <span className="detail-value font-mono"><strong>{registeredUserInfo?.regNo}</strong></span>
-                  </div>
-                  <div className="popup-detail-row">
-                    <span className="detail-label">Program:</span>
-                    <span className="detail-value">{registeredUserInfo?.program}</span>
-                  </div>
-                  <div className="popup-detail-row">
-                    <span className="detail-label">Department:</span>
-                    <span className="detail-value">{registeredUserInfo?.department}</span>
-                  </div>
-                  <div className="popup-detail-row">
-                    <span className="detail-label">Batch:</span>
-                    <span className="detail-value">Batch {registeredUserInfo?.batch}</span>
-                  </div>
-                </>
-              )}
-
-              {registeredUserInfo?.role === 'supervisor' && (
-                <>
-                  <div className="popup-detail-row">
-                    <span className="detail-label">Designation:</span>
-                    <span className="detail-value"><strong>{registeredUserInfo?.designation}</strong></span>
-                  </div>
-                  <div className="popup-detail-row">
-                    <span className="detail-label">Department:</span>
-                    <span className="detail-value">{registeredUserInfo?.department}</span>
-                  </div>
-                  <div className="popup-detail-row">
-                    <span className="detail-label">Expertise:</span>
-                    <span className="detail-value">{registeredUserInfo?.expertise}</span>
-                  </div>
-                </>
-              )}
-
-              {registeredUserInfo?.role === 'public' && (
-                <>
-                  <div className="popup-detail-row">
-                    <span className="detail-label">Organization:</span>
-                    <span className="detail-value">{registeredUserInfo?.institution}</span>
-                  </div>
-                  <div className="popup-detail-row">
-                    <span className="detail-label">Designation:</span>
-                    <span className="detail-value">{registeredUserInfo?.designation}</span>
-                  </div>
-                  <div className="popup-detail-row">
-                    <span className="detail-label">Phone:</span>
-                    <span className="detail-value">{registeredUserInfo?.phone}</span>
-                  </div>
-                </>
-              )}
-            </div>
 
             <div className="popup-actions">
               <button

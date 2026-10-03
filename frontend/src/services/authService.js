@@ -8,21 +8,6 @@ const SESSION_STORAGE_KEY = 'researchhub_session';
 const AUTH_EVENT_KEY = 'researchhub_auth_change';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-export const DEPARTMENTS = [
-  'Physical Science',
-  'Biological Science',
-  'Computer Science',
-  'Engineering',
-];
-
-export const BATCHES = [
-  '2023/2024',
-  '2022/2023',
-  '2021/2022',
-  '2020/2021',
-  '2019/2020',
-];
-
 export const DEGREE_PROGRAMS = [
   'BSc (Hons) in Information & Technology',
   'Bachelor of Science in Applied Mathematics & Computing',
@@ -70,6 +55,10 @@ const apiRequest = async (endpoint, options = {}) => {
 
   return data;
 };
+
+export async function getRegistrationOptions() {
+  return apiRequest('/auth/options');
+}
 
 export function getStoredUsers() {
   try {
