@@ -3,6 +3,7 @@ import cors from "cors";
 
 import authRoutes from "./routes/auth.js";
 import studentRoutes from "./routes/studentRoutes.js";
+import supervisorRoutes from "./routes/supervisorRoutes.js";
 
 const app = express();
 
@@ -12,5 +13,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/rh/student", studentRoutes);
+app.use("/api/supervisor", supervisorRoutes);
+app.use("/rh/supervisor", supervisorRoutes);
 
 export default app

@@ -5,6 +5,9 @@ import Supervisor from "../models/supervisor.js";
 import Research from "../models/research.js";
 import Document from "../models/document.js";
 import Feedback from "../models/feedback.js";
+import Deadline from "../models/deadline.js";
+import Meeting from "../models/meeting.js";
+import Notification from "../models/notification.js";
 
 //asry apis
 
@@ -225,5 +228,9 @@ export const listDoucments = async (req, res, next) => {
   }
 };
 
+export const listDocuments = listDoucments;
+
 
 //linath apis
+
+
