@@ -7,6 +7,7 @@ import StakeholderPortals from './components/StakeholderPortals';
 import FeatureHighlights from './components/FeatureHighlights';
 import Footer from './components/Footer';
 import ShowcasePage from './pages/ShowcasePage';
+import ResearchDetailsPage from './pages/ResearchDetailsPage';
 import AuthPage from './pages/AuthPage';
 
 
@@ -41,6 +42,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/showcase" element={<ShowcasePage />} />
+          <Route path="/showcase/:researchId" element={<ResearchDetailsPage />} />
           <Route path="/login" element={<AuthPage initialMode="login" />} />
           <Route path="/register" element={<AuthPage initialMode="register" />} />
           <Route path="/auth" element={<AuthPage />} />

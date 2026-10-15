@@ -1,82 +1,67 @@
 import mongoose from "mongoose";
 
-import User from "../models/user.js";
 import Research from "../models/research.js";
 import Document from "../models/document.js";
-import Feedback from "../models/feedback.js";
-import Supervisor from "../models/supervisor.js";
+
+const publicStatuses = ["ongoing", "completed"];
 
 const getPublicResearch = (researchId) => {
-  if (!mongoose.isValidObjectId(researchId)) return null;
-  return Research.findOne({ _id: researchId, isPublic: true });
-};
-
-export const getProfile = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user.id).select("-password");
-    if (!user) {
-      return res.status(404).json({ message: "User not found." });
-    }
-    return res.status(200).json({ user });
-  } catch (error) {
-    return next(error);
+  if (!mongoose.isValidObjectId(researchId)) {
+    return null;
   }
+  return Research.findOne({
+    _id: researchId,
+    isPublic: true,
+    status: { $in: publicStatuses },
+  });
 };
- 
-export const updateProfile = async (req, res, next) => {
-  try {
-    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
-      return res.status(400).json({ message: "A JSON object is required." });
-    }
 
-    const allowedFields = ["name", "institution", "designation", "phone"];
-    const updates = {};
+const researchPopulation = [
+  {
+    path: "studentId",
+    populate: [
+      { path: "userId", select: "name" },
+      { path: "departmentId", select: "name" },
+      { path: "batchId", select: "batchName academicYear" },
+    ],
+  },
+  {
+    path: "supervisorId",
+    populate: { path: "userId", select: "name" },
+  },
+];
 
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined) {
-        if (typeof req.body[field] !== "string") {
-          return res.status(400).json({ message: ${field} must be a string. });
-        }
-        const value = req.body[field].trim();
-        if (field === "name" && !value) {
-          return res.status(400).json({ message: "name cannot be empty." });
-        }
-        updates[field] = value;
-      }
-    }
-
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ message: "No valid fields provided to update." });
-    }
-
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { $set: updates },
-      { new: true, runValidators: true }
-    ).select("-password");
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found." });
-    }
-
-    return res.status(200).json({ user });
-  } catch (error) {
-    return next(error);
-  }
-};
- 
 export const listResearch = async (req, res, next) => {
   try {
-    const filter = { isPublic: true };
+    const filter = {
+      isPublic: true,
+      status: { $in: publicStatuses },
+    };
 
-    const allowedStatuses = ["approved", "ongoing", "completed"];
     if (req.query.status !== undefined) {
-      if (!allowedStatuses.includes(req.query.status)) {
+      if (typeof req.query.status !== "string" || !publicStatuses.includes(req.query.status)) {
         return res.status(400).json({
-          message: status must be one of: ${allowedStatuses.join(", ")}.,
+          message: `status must be one of: ${publicStatuses.join(", ")}.`,
         });
       }
       filter.status = req.query.status;
+    }
+
+    if (req.query.q !== undefined) {
+      if (typeof req.query.q !== "string") {
+        return res.status(400).json({ message: "q must be a string." });
+      }
+      const search = req.query.q.trim();
+      if (search) {
+        const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const searchRegex = new RegExp(escapedSearch, "i");
+        filter.$or = [
+          { title: searchRegex },
+          { description: searchRegex },
+          { topic: searchRegex },
+          { academicYear: searchRegex },
+        ];
+      }
     }
 
     if (req.query.academicYear !== undefined) {
@@ -87,26 +72,15 @@ export const listResearch = async (req, res, next) => {
     }
 
     const research = await Research.find(filter)
-      .populate({
-        path: "studentId",
-        populate: [
-          { path: "userId", select: "name email" },
-          { path: "departmentId", select: "name" },
-          { path: "batchId", select: "batchName academicYear" },
-        ],
-      })
-      .populate({
-        path: "supervisorId",
-        populate: { path: "userId", select: "name email" },
-      })
+      .populate(researchPopulation)
       .sort({ updatedAt: -1 });
 
-    return res.status(200).json({ research });
+    return res.json({ research });
   } catch (error) {
     return next(error);
   }
 };
- 
+
 export const getResearchDetails = async (req, res, next) => {
   try {
     const research = await getPublicResearch(req.params.researchId);
@@ -114,55 +88,12 @@ export const getResearchDetails = async (req, res, next) => {
       return res.status(404).json({ message: "Research project not found." });
     }
 
-    const [documents, feedback] = await Promise.all([
-      Document.find({ researchId: research._id, visibility: "public" }).sort({ createdAt: -1 }),
-      Feedback.find({ researchId: research._id })
-        .populate("userId", "name role")
-        .sort({ createdAt: -1 }),
-    ]);
-
-    return res.status(200).json({ research, documents, feedback });
-  } catch (error) {
-    return next(error);
-  }
-};
- 
-export const addFeedback = async (req, res, next) => {
-  try {
-    const research = await getPublicResearch(req.params.researchId);
-    if (!research) {
-      return res.status(404).json({ message: "Research project not found." });
-    }
-
-    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
-      return res.status(400).json({ message: "A JSON object is required." });
-    }
-
-    if (typeof req.body.message !== "string" || !req.body.message.trim()) {
-      return res.status(400).json({ message: "message is required." });
-    }
-
-    const feedback = await Feedback.create({
+    const documents = await Document.find({
       researchId: research._id,
-      userId: req.user.id,
-      message: req.body.message.trim(),
-    });
+      visibility: "public",
+    }).sort({ createdAt: -1 });
 
-    return res.status(201).json({ feedback });
-  } catch (error) {
-    return next(error);
-  }
-};
- 
-export const listSupervisors = async (req, res, next) => {
-  try {
-    const supervisors = await Supervisor.find()
-      .populate("userId", "name email")
-      .populate("departmentId", "name")
-      .select("designation expertise departmentId userId")
-      .sort({ createdAt: -1 });
-
-    return res.status(200).json({ supervisors });
+    return res.json({ research, documents });
   } catch (error) {
     return next(error);
   }
