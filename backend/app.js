@@ -19,4 +19,13 @@ app.use("/rh/student", studentRoutes);
 app.use("/api/supervisor", supervisorRoutes);
 app.use("/rh/supervisor", supervisorRoutes);
 
-export default app
+// Global Error Handler
+app.use((err, _req, res, _next) => {
+  console.error("Unhandled error:", err);
+  const status = err.status || err.statusCode || 500;
+  return res.status(status).json({
+    message: err.message || "An unexpected server error occurred.",
+  });
+});
+
+export default app;

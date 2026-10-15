@@ -5,17 +5,6 @@ import Document from "../models/document.js";
 
 const publicStatuses = ["ongoing", "completed"];
 
-const getPublicResearch = (researchId) => {
-  if (!mongoose.isValidObjectId(researchId)) {
-    return null;
-  }
-  return Research.findOne({
-    _id: researchId,
-    isPublic: true,
-    status: { $in: publicStatuses },
-  });
-};
-
 const researchPopulation = [
   {
     path: "studentId",
@@ -27,9 +16,20 @@ const researchPopulation = [
   },
   {
     path: "supervisorId",
-    populate: { path: "userId", select: "name" },
+    populate: { path: "userId", select: "name designation" },
   },
 ];
+
+const getPublicResearch = (researchId) => {
+  if (!mongoose.isValidObjectId(researchId)) {
+    return null;
+  }
+  return Research.findOne({
+    _id: researchId,
+    isPublic: true,
+    status: { $in: publicStatuses },
+  }).populate(researchPopulation);
+};
 
 export const listResearch = async (req, res, next) => {
   try {
