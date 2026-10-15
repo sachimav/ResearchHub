@@ -41,6 +41,21 @@ const documentSchema = new mongoose.Schema(
       enum: ["private", "public"],
       default: "private",
     },
+
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected", "revision_requested"],
+      default: "pending",
+    },
+
+    feedback: {
+      type: String,
+      default: "",
+    },
+
+    reviewedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
