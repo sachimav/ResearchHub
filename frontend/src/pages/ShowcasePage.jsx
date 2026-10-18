@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getPublicResearch } from '../services/publicService';
+import { getCurrentUser } from '../services/authService';
 
 const statusLabels = {
-  completed: 'Completed',
   ongoing: 'Ongoing',
+  completed: 'Completed',
 };
 
 export default function ShowcasePage() {
+  const currentUser = getCurrentUser();
   const [research, setResearch] = useState([]);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
@@ -104,8 +106,8 @@ export default function ShowcasePage() {
               <div>
                 <div className="project-card-header">
                   <span className="project-cat-badge">{project.topic || 'Research project'}</span>
-                  <span className={`project-status-pill ${project.status}`}>
-                    {statusLabels[project.status]}
+                  <span className={`project-status-pill ${project.status === 'completed' ? 'completed' : 'ongoing'}`}>
+                    {project.status === 'completed' ? 'Completed' : 'Ongoing'}
                   </span>
                 </div>
                 <h2 className="project-card-title">{project.title}</h2>
@@ -128,7 +130,14 @@ export default function ShowcasePage() {
               </div>
               <div className="project-card-footer">
                 <span>{project.progressPercentage || 0}% progress</span>
-                <Link className="btn btn-primary btn-sm" to={`/showcase/${project._id}`}>
+                <Link
+                  className="btn btn-primary btn-sm"
+                  to={
+                    currentUser
+                      ? `/showcase/${project._id}`
+                      : `/login?redirect=${encodeURIComponent(`/showcase/${project._id}`)}`
+                  }
+                >
                   View full research
                 </Link>
               </div>

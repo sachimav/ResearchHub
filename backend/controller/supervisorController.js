@@ -284,19 +284,28 @@ export const getProgress = async (req, res, next) => {
     if (status !== undefined) {
       research.status = status;
     }
-    if (isPublic !== undefined && typeof isPublic === "boolean") {
-      research.isPublic = isPublic;
+    if (isPublic !== undefined) {
+      if (typeof isPublic === "boolean") {
+        research.isPublic = isPublic;
+      } else if (isPublic === "true" || isPublic === "false") {
+        research.isPublic = isPublic === "true";
+      }
     }
 
     await research.save();
 
     const student = await Student.findById(research.studentId).select("userId");
     if (student) {
+      const isOnlyShowcaseUpdate = isPublic !== undefined && progressPercentage === undefined && status === undefined;
       await Notification.create({
         userId: student.userId,
         researchId: research._id,
-        title: "Research Progress Updated",
-        message: `Your supervisor updated progress to ${research.progressPercentage}% (${research.status}).`,
+        title: isOnlyShowcaseUpdate
+          ? (research.isPublic ? "Research Published to Showcase" : "Research Removed from Showcase")
+          : "Research Progress Updated",
+        message: isOnlyShowcaseUpdate
+          ? `Your supervisor has ${research.isPublic ? "published your research to the public research showcase" : "removed your research from the public showcase"}.`
+          : `Your supervisor updated progress to ${research.progressPercentage}% (${research.status}).`,
         type: "general",
       });
     }
