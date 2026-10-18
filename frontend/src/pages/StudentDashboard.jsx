@@ -512,7 +512,7 @@ export default function StudentDashboard() {
             <div className="metrics-triad-grid">
               <div className="metric-glow-card glass-card">
                 <div className="metric-card-header">
-                  <span className="metric-title-chip">Project Lifecycle</span>
+                  <span className="metric-title-chip">Project</span>
                   <div className="metric-icon-bubble bubble-purple">🎓</div>
                 </div>
                 <div className="metric-primary-data">
@@ -787,12 +787,7 @@ export default function StudentDashboard() {
             <div className="glass-card section-card">
               <div className="section-header-flex">
                 <div>
-                  <span className="section-pill">Interactive Roadmap</span>
-                  <h2 className="section-title-bold">Research Milestone Pipeline</h2>
-                  <p className="section-subtext">
-                    Follow the academic roadmap from problem formulation to final viva defense. Check off milestones
-                    as you progress to dynamically advance your completion score.
-                  </p>
+                  <h2 className="section-title-bold">Research Milestones</h2>
                 </div>
                 <div className="overall-score-pill">
                   <span className="score-num">{progressPct}%</span>

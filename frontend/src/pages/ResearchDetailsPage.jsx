@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getPublicResearchDetails } from '../services/publicService';
+import { getCurrentUser } from '../services/authService';
 
 export default function ResearchDetailsPage() {
   const { researchId } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const user = getCurrentUser();
+    if (!user) {
+      navigate(`/login?redirect=${encodeURIComponent(`/showcase/${researchId}`)}`);
+      return;
+    }
+
     getPublicResearchDetails(researchId)
       .then(setData)
       .catch((loadError) => setError(loadError.message));
-  }, [researchId]);
+  }, [researchId, navigate]);
 
   if (error) return <div className="container showcase-page-body"><p role="alert">{error}</p></div>;
   if (!data) return <div className="container showcase-page-body"><p>Loading research...</p></div>;
@@ -21,7 +29,7 @@ export default function ResearchDetailsPage() {
     <div className="showcase-page">
       <div className="container showcase-page-body">
         <Link to="/showcase" className="back-btn">← Back to Research Showcase</Link>
-        <span className="section-tag">{research.status}</span>
+        <span className="section-tag">{research.status === 'completed' ? 'Completed' : 'Ongoing'}</span>
         <h1 className="showcase-page-title" style={{ color: 'var(--text-heading)' }}>{research.title}</h1>
         <p className="project-meta-faculty">
           {research.studentId?.userId?.name || 'University researcher'} · {research.academicYear}

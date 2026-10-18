@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import Research from "../models/research.js";
 import Document from "../models/document.js";
 
-const publicStatuses = ["ongoing", "completed"];
+const publicStatuses = ["approved", "ongoing", "completed"];
 
 const researchPopulation = [
   {
@@ -39,12 +39,17 @@ export const listResearch = async (req, res, next) => {
     };
 
     if (req.query.status !== undefined) {
-      if (typeof req.query.status !== "string" || !publicStatuses.includes(req.query.status)) {
+      const allowedFilterStatuses = ["ongoing", "completed"];
+      if (typeof req.query.status !== "string" || !allowedFilterStatuses.includes(req.query.status)) {
         return res.status(400).json({
-          message: `status must be one of: ${publicStatuses.join(", ")}.`,
+          message: `status must be one of: ${allowedFilterStatuses.join(", ")}.`,
         });
       }
-      filter.status = req.query.status;
+      if (req.query.status === "ongoing") {
+        filter.status = { $in: ["ongoing", "approved"] };
+      } else {
+        filter.status = req.query.status;
+      }
     }
 
     if (req.query.q !== undefined) {

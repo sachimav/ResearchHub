@@ -176,6 +176,7 @@ export default function SupervisorDashboard() {
     }
   };
 
+
   const handleAddMilestone = async (e) => {
     e.preventDefault();
     if (!selectedProject || !milestoneForm.title.trim()) return;
@@ -873,9 +874,22 @@ export default function SupervisorDashboard() {
 
                         <div className="public-showcase-indicator">
                           <span>Showcase Publication:</span>
-                          <strong className={proj.isPublic ? 'text-emerald' : 'text-muted'}>
-                            {proj.isPublic ? '🌐 Visible on University Portal' : '🔒 Internal Campus Repository'}
-                          </strong>
+                          <div className="showcase-indicator-right">
+                            <strong className={proj.isPublic ? 'text-emerald' : 'text-muted'}>
+                              {proj.isPublic ? '🌐 Visible on University Portal' : '🔒 Internal Campus Repository'}
+                            </strong>
+                            {proj.isPublic && (
+                              <a
+                                href={`/showcase/${proj._id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="showcase-direct-link"
+                                title="Open research in Public Showcase"
+                              >
+                                View ↗
+                              </a>
+                            )}
+                          </div>
                         </div>
 
                         <div className="project-card-btn-row">
