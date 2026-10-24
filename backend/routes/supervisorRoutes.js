@@ -1,8 +1,11 @@
 import { Router } from "express";
 
-const router = Router()
+import { getReviewQueue } from "../controller/supervisorController.js";
+import { protect, requireRole } from "../middleware/authMiddleware.js";
 
+const router = Router();
 
-
+router.use(protect, requireRole("supervisor"));
+router.get("/review-queue", getReviewQueue);
 
 export default router;

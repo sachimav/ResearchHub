@@ -5,6 +5,7 @@ import Supervisor from "../models/supervisor.js";
 import Research from "../models/research.js";
 import Document from "../models/document.js";
 import Feedback from "../models/feedback.js";
+import Meeting from "../models/meeting.js";
 
 //asry apis
 
@@ -54,6 +55,39 @@ export const listResearch = async (req, res, next) => {
 
     const research = await Research.find(filter).sort({ updatedAt: -1 });
     return res.json({ research });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getReviewQueue = async (req, res, next) => {
+  try {
+    const supervisor = await getSupervisor(req.user.id);
+    if (!supervisor) {
+      return res.status(404).json({ message: "Supervisor profile not found." });
+    }
+
+    const [proposals, meetings] = await Promise.all([
+      Research.find({ supervisorId: supervisor._id, status: "pending" })
+        .populate({
+          path: "studentId",
+          populate: [
+            { path: "userId", select: "name email" },
+            { path: "departmentId", select: "name" },
+            { path: "batchId", select: "batchName academicYear" },
+          ],
+        })
+        .sort({ updatedAt: -1 }),
+      Meeting.find({ supervisorId: supervisor._id, status: "scheduled" })
+        .populate({
+          path: "studentId",
+          populate: { path: "userId", select: "name email" },
+        })
+        .populate("researchId", "title status")
+        .sort({ meetingDate: 1 }),
+    ]);
+
+    return res.json({ proposals, meetings });
   } catch (error) {
     return next(error);
   }
