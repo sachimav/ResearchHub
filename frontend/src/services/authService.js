@@ -6,7 +6,7 @@
 const USERS_STORAGE_KEY = 'researchhub_users_db';
 const SESSION_STORAGE_KEY = 'researchhub_session';
 const AUTH_EVENT_KEY = 'researchhub_auth_change';
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 export const DEGREE_PROGRAMS = [
   'BSc (Hons) in Information & Technology',
@@ -22,6 +22,12 @@ export const SUPERVISOR_DESIGNATIONS = [
   'Lecturer',
   'Visiting Research Fellow',
 ];
+
+export const getPortalRoute = (role) => {
+  if (role === 'student') return '/student/dashboard';
+  if (role === 'supervisor') return '/supervisor/dashboard';
+  return '/showcase';
+};
 
 const persistSession = (user, token) => {
   const sessionUser = user ? { ...user, token } : null;

@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function ResearchHubLogo({ className = '', fontSize = 26, lightMode = false }) {
   return (
     <div 

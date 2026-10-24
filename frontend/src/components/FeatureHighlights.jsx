@@ -1,5 +1,3 @@
-import React from 'react';
-
 const FEATURES_DATA = [
   {
     id: 'project-proposal',

@@ -1,37 +1,9 @@
-import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
 import uovLogo from '../assets/logo.png';
 import ResearchHubLogo from './ResearchHubLogo';
 
 export default function Footer() {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const handleNavClick = (sectionId, e) => {
-    if (e) e.preventDefault();
-
-    if (location.pathname === '/') {
-      const el = document.getElementById(sectionId);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    } else {
-      navigate('/');
-      setTimeout(() => {
-        const el = document.getElementById(sectionId);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        } else {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      }, 100);
-    }
-  };
   return (
     <footer className="footer-wrapper">
-      {/* Main Institutional Footer - Next Academic Cycle CTA Removed */}
       <div className="main-footer-body">
         <div className="container footer-grid">
           {/* Column 1: Dual Logos and Institutional Info */}
@@ -55,8 +27,6 @@ export default function Footer() {
               </div>
             </div>
           </div>
-
-
         </div>
 
         {/* Bottom Legal & Accreditation Bar */}

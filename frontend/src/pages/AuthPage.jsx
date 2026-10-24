@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   registerUser,
   loginUser,
+  getCurrentUser,
   isValidEmail,
   emailExists,
   regNoExists,
@@ -58,12 +59,19 @@ export default function AuthPage({ initialMode = 'login' }) {
   const [registrationOptionsError, setRegistrationOptionsError] = useState('');
   const [isLoadingRegistrationOptions, setIsLoadingRegistrationOptions] = useState(true);
 
-  // Clear errors when changing mode or role
-  useEffect(() => {
+  const handleModeChange = (mode) => {
+    setAuthMode(mode);
     setErrors({});
     setServerError('');
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-  }, [authMode, selectedRole]);
+  };
+
+  const handleRoleChange = (role) => {
+    setSelectedRole(role);
+    setErrors({});
+    setServerError('');
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  };
 
   useEffect(() => {
     let isCurrent = true;
@@ -88,16 +96,7 @@ export default function AuthPage({ initialMode = 'login' }) {
     };
   }, []);
 
-  // Keep state synced with query params and ensure page starts from top
-  useEffect(() => {
-    if (urlMode === 'register' || urlMode === 'login') {
-      setAuthMode(urlMode);
-    }
-    if (validRoles.includes(urlRole)) {
-      setSelectedRole(urlRole);
-    }
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-  }, [urlMode, urlRole]);
+
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -244,7 +243,7 @@ export default function AuthPage({ initialMode = 'login' }) {
           setServerError(result.error);
         }
       }
-    } catch (err) {
+    } catch {
       setServerError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -256,10 +255,20 @@ export default function AuthPage({ initialMode = 'login' }) {
 
     if (successPopupMode === 'login') {
       const redirectPath = searchParams.get('redirect');
-      navigate(redirectPath || '/showcase');
+      if (redirectPath) {
+        navigate(redirectPath);
+        return;
+      }
+      const currentUser = getCurrentUser();
+      if (currentUser?.role === 'student') {
+        navigate('/student/dashboard');
+      } else if (currentUser?.role === 'supervisor') {
+        navigate('/supervisor/dashboard');
+      } else {
+        navigate('/showcase');
+      }
       return;
     }
-    setAuthMode('login');
     setAuthMode('login');
   };
 
@@ -305,7 +314,7 @@ export default function AuthPage({ initialMode = 'login' }) {
               type="button"
               id="mode-login-btn"
               className={`mode-toggle-btn ${authMode === 'login' ? 'active' : ''}`}
-              onClick={() => setAuthMode('login')}
+              onClick={() => handleModeChange('login')}
             >
               Sign In
             </button>
@@ -313,7 +322,7 @@ export default function AuthPage({ initialMode = 'login' }) {
               type="button"
               id="mode-register-btn"
               className={`mode-toggle-btn ${authMode === 'register' ? 'active' : ''}`}
-              onClick={() => setAuthMode('register')}
+              onClick={() => handleModeChange('register')}
             >
               Register
             </button>
@@ -326,7 +335,7 @@ export default function AuthPage({ initialMode = 'login' }) {
                 type="button"
                 id="role-student-btn"
                 className={`auth-role-btn ${selectedRole === 'student' ? 'active' : ''}`}
-                onClick={() => setSelectedRole('student')}
+                onClick={() => handleRoleChange('student')}
               >
                 <span className="role-icon">🎓</span>
                 <span className="role-title">Student</span>
@@ -336,7 +345,7 @@ export default function AuthPage({ initialMode = 'login' }) {
                 type="button"
                 id="role-supervisor-btn"
                 className={`auth-role-btn ${selectedRole === 'supervisor' ? 'active' : ''}`}
-                onClick={() => setSelectedRole('supervisor')}
+                onClick={() => handleRoleChange('supervisor')}
               >
                 <span className="role-icon">👨‍🏫</span>
                 <span className="role-title">Supervisor</span>
@@ -346,7 +355,7 @@ export default function AuthPage({ initialMode = 'login' }) {
                 type="button"
                 id="role-public-btn"
                 className={`auth-role-btn ${selectedRole === 'public' ? 'active' : ''}`}
-                onClick={() => setSelectedRole('public')}
+                onClick={() => handleRoleChange('public')}
               >
                 <span className="role-icon">👥</span>
                 <span className="role-title">Public User</span>
@@ -752,7 +761,7 @@ export default function AuthPage({ initialMode = 'login' }) {
                   <button
                     type="button"
                     className="auth-link-btn"
-                    onClick={() => setAuthMode('register')}
+                    onClick={() => handleModeChange('register')}
                   >
                     Register here
                   </button>
@@ -763,7 +772,7 @@ export default function AuthPage({ initialMode = 'login' }) {
                   <button
                     type="button"
                     className="auth-link-btn"
-                    onClick={() => setAuthMode('login')}
+                    onClick={() => handleModeChange('login')}
                   >
                     Sign in here
                   </button>

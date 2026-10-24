@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import './App.css';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -7,8 +7,10 @@ import StakeholderPortals from './components/StakeholderPortals';
 import FeatureHighlights from './components/FeatureHighlights';
 import Footer from './components/Footer';
 import ShowcasePage from './pages/ShowcasePage';
+import ResearchDetailsPage from './pages/ResearchDetailsPage';
 import AuthPage from './pages/AuthPage';
-
+import StudentDashboard from './pages/StudentDashboard';
+import SupervisorDashboard from './pages/SupervisorDashboard';
 
 function ScrollToTop() {
   const { pathname, search } = useLocation();
@@ -31,7 +33,6 @@ function HomePage() {
   );
 }
 
-
 function App() {
   return (
     <div className="researchhub-app">
@@ -41,6 +42,9 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/showcase" element={<ShowcasePage />} />
+          <Route path="/showcase/:researchId" element={<ResearchDetailsPage />} />
+          <Route path="/student/dashboard" element={<StudentDashboard />} />
+          <Route path="/supervisor/dashboard" element={<SupervisorDashboard />} />
           <Route path="/login" element={<AuthPage initialMode="login" />} />
           <Route path="/register" element={<AuthPage initialMode="register" />} />
           <Route path="/auth" element={<AuthPage />} />

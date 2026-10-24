@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import uovLogo from '../assets/logo.png';
-import { getCurrentUser, logoutUser, onAuthStateChanged } from '../services/authService';
+import { getCurrentUser, logoutUser, onAuthStateChanged, getPortalRoute } from '../services/authService';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -19,7 +19,6 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    // Listen for auth state changes
     const unsubscribe = onAuthStateChanged((user) => {
       setCurrentUser(user);
     });
@@ -39,7 +38,6 @@ export default function Navbar() {
       }
     } else {
       navigate('/');
-      // Once navigated to home, scroll to the targeted section
       setTimeout(() => {
         const el = document.getElementById(sectionId);
         if (el) {
@@ -58,7 +56,6 @@ export default function Navbar() {
 
   return (
     <header className={`navbar-wrapper ${scrolled ? 'scrolled' : ''}`}>
-      {/* Main Navbar with Dual Logos - No Top Institution Bar */}
       <nav className="main-navbar">
         <div className="container navbar-inner">
           {/* Left Side: University of Vavuniya Official Logo */}
@@ -72,7 +69,7 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Center: Overview, Features, Research Showcase, About Us */}
+          {/* Center Links */}
           <div className="nav-center-links">
             <a 
               href="#overview" 
@@ -89,23 +86,28 @@ export default function Navbar() {
               Features
             </a>
             <Link to="/showcase" className="nav-link">Research Showcase</Link>
-            <Link to="/about" className="nav-link">About Us</Link>
+            {currentUser && (
+              <Link to={getPortalRoute(currentUser.role)} className="nav-link portal-link-highlight">
+                {currentUser.role === 'student' ? 'Student Dashboard' : currentUser.role === 'supervisor' ? 'Supervisor Dashboard' : 'Dashboard'}
+              </Link>
+            )}
           </div>
 
-          {/* Right Side: Login & Mobile Menu Toggle */}
+          {/* Right Side: Login & User Actions */}
           <div className="nav-right-brand">
             <div className="nav-actions">
               {currentUser ? (
                 <div className="nav-user-logged">
-                  <div
+                  <Link
+                    to={getPortalRoute(currentUser.role)}
                     className="nav-user-chip"
-                    title={`Logged in as ${currentUser.name}`}
+                    title={`Go to ${currentUser.role} dashboard`}
                   >
                     <span className="user-chip-icon">
                       {currentUser.role === 'student' ? '🎓' : currentUser.role === 'supervisor' ? '👨‍🏫' : '👥'}
                     </span>
                     <span className="user-chip-name">{currentUser.name}</span>
-                  </div>
+                  </Link>
                   <button
                     type="button"
                     className="btn btn-outline btn-sm logout-nav-btn"
@@ -166,7 +168,11 @@ export default function Navbar() {
                 Features
               </a>
               <Link to="/showcase" onClick={() => setMobileMenuOpen(false)}>Research Showcase</Link>
-              <Link to="/about" onClick={() => setMobileMenuOpen(false)}>About Us</Link>
+              {currentUser && (
+                <Link to={getPortalRoute(currentUser.role)} onClick={() => setMobileMenuOpen(false)}>
+                  {currentUser.role === 'student' ? '🎓 Student Dashboard' : '👨‍🏫 Supervisor Dashboard'}
+                </Link>
+              )}
             </div>
             <div className="mobile-actions">
               {currentUser ? (
@@ -177,7 +183,7 @@ export default function Navbar() {
                     style={{ width: '100%', textAlign: 'center' }}
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Go to Portal ({currentUser.name})
+                    Go to Dashboard ({currentUser.name})
                   </Link>
                   <button
                     type="button"
