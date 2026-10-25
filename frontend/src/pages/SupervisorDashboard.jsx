@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getSupervisorDashboard,
@@ -42,6 +42,20 @@ export default function SupervisorDashboard() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [visitedTabs, setVisitedTabs] = useState({});
+
+  const selectTab = (tab) => {
+    setActiveTab(tab);
+    setVisitedTabs((previous) => ({ ...previous, [tab]: true }));
+  };
+  const reviewQueueRef = useRef(null);
+  const [reviewQueueRequest, setReviewQueueRequest] = useState(0);
+
+  useEffect(() => {
+    if (reviewQueueRequest === 0) return;
+    reviewQueueRef.current?.focus({ preventScroll: true });
+    reviewQueueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [reviewQueueRequest]);
 
   // Modals state
   const [selectedProject, setSelectedProject] = useState(null);
@@ -162,7 +176,6 @@ export default function SupervisorDashboard() {
     try {
       setSubmitting(true);
       await updateResearchProgress(selectedProject._id, {
-        progressPercentage: Number(progressForm.progressPercentage),
         status: progressForm.status,
         isPublic: progressForm.isPublic,
       });
@@ -182,12 +195,15 @@ export default function SupervisorDashboard() {
     if (!selectedProject || !milestoneForm.title.trim()) return;
     try {
       setSubmitting(true);
-      await manageMilestones(selectedProject._id, {
+      const result = await manageMilestones(selectedProject._id, {
         action: 'add',
         title: milestoneForm.title,
         description: milestoneForm.description,
         dueDate: milestoneForm.dueDate,
       });
+      setSelectedProject(result.research);
+      setProgressForm((previous) => ({ ...previous, progressPercentage: result.research.progressPercentage,
+        status: previous.status === 'completed' && result.research.status !== 'completed' ? result.research.status : previous.status }));
       notify('Milestone added to research plan.');
       setMilestoneForm({ title: '', description: '', dueDate: '' });
       await loadData();
@@ -201,11 +217,14 @@ export default function SupervisorDashboard() {
   const handleToggleMilestone = async (project, milestoneId, currentStatus) => {
     const nextStatus = currentStatus === 'completed' ? 'in_progress' : 'completed';
     try {
-      await manageMilestones(project._id, {
+      const result = await manageMilestones(project._id, {
         action: 'update',
         milestoneId,
         status: nextStatus,
       });
+      setSelectedProject(result.research);
+      setProgressForm((previous) => ({ ...previous, progressPercentage: result.research.progressPercentage,
+        status: previous.status === 'completed' && result.research.status !== 'completed' ? result.research.status : previous.status }));
       notify(`Milestone updated to ${nextStatus}.`);
       await loadData();
     } catch (err) {
@@ -271,9 +290,10 @@ export default function SupervisorDashboard() {
   const handleRespondMeeting = async (meetingId, status) => {
     const meetLink = prompt(
       status === 'scheduled'
-        ? 'Enter online meeting link or location note (optional):'
+        ? 'Enter an HTTP or HTTPS meeting link (optional):'
         : 'Enter reason for declining meeting (optional):'
     );
+    if (meetLink === null) return;
     try {
       await respondMeetingRequest(meetingId, {
         status,
@@ -507,61 +527,61 @@ export default function SupervisorDashboard() {
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'overview' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('overview')}
+                  onClick={() => selectTab('overview')}
                 >
                   <span className="nav-icon">📊</span>
                   <span className="nav-text">Queue &amp; Overview</span>
-                  {totalQueueCount > 0 && <span className="pill-counter alert-counter">{totalQueueCount}</span>}
+                  {!visitedTabs.overview && totalQueueCount > 0 && <span className="pill-counter alert-counter">{totalQueueCount}</span>}
                 </button>
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'students' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('students')}
+                  onClick={() => selectTab('students')}
                 >
                   <span className="nav-icon">👨‍🎓</span>
                   <span className="nav-text">Supervised Researchers</span>
-                  <span className="pill-counter">{assignedProjects.length}</span>
+                  {!visitedTabs.students && <span className="pill-counter">{assignedProjects.length}</span>}
                 </button>
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'proposals' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('proposals')}
+                  onClick={() => selectTab('proposals')}
                 >
                   <span className="nav-icon">📝</span>
                   <span className="nav-text">Proposals</span>
-                  {pendingProposals.length > 0 && <span className="pill-counter alert-counter">{pendingProposals.length}</span>}
+                  {!visitedTabs.proposals && pendingProposals.length > 0 && <span className="pill-counter alert-counter">{pendingProposals.length}</span>}
                 </button>
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'documents' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('documents')}
+                  onClick={() => selectTab('documents')}
                 >
                   <span className="nav-icon">📂</span>
                   <span className="nav-text">Deliverables</span>
-                  {pendingDocs.length > 0 && <span className="pill-counter alert-counter">{pendingDocs.length}</span>}
+                  {!visitedTabs.documents && pendingDocs.length > 0 && <span className="pill-counter alert-counter">{pendingDocs.length}</span>}
                 </button>
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'meetings' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('meetings')}
+                  onClick={() => selectTab('meetings')}
                 >
                   <span className="nav-icon">🗓</span>
                   <span className="nav-text">Consultations &amp; Hours</span>
-                  {meetingRequests.length > 0 && <span className="pill-counter alert-counter">{meetingRequests.length}</span>}
+                  {!visitedTabs.meetings && meetingRequests.length > 0 && <span className="pill-counter alert-counter">{meetingRequests.length}</span>}
                 </button>
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'deadlines' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('deadlines')}
+                  onClick={() => selectTab('deadlines')}
                 >
                   <span className="nav-icon">⏰</span>
                   <span className="nav-text">Deadlines</span>
-                  <span className="pill-counter">{deadlines.length}</span>
+                  {!visitedTabs.deadlines && <span className="pill-counter">{deadlines.length}</span>}
                 </button>
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'reports' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('reports')}
+                  onClick={() => selectTab('reports')}
                 >
                   <span className="nav-icon">📈</span>
                   <span className="nav-text">Analytics</span>
@@ -569,7 +589,7 @@ export default function SupervisorDashboard() {
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'notifications' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('notifications')}
+                  onClick={() => selectTab('notifications')}
                 >
                   <span className="nav-icon">🔔</span>
                   <span className="nav-text">Alerts</span>
@@ -625,7 +645,10 @@ export default function SupervisorDashboard() {
                 <button
                   type="button"
                   className="btn-glow-primary btn-sm"
-                  onClick={() => setActiveTab('overview')}
+                  onClick={() => {
+                    selectTab('overview');
+                    setReviewQueueRequest((request) => request + 1);
+                  }}
                 >
                   Review Queue Now ➔
                 </button>
@@ -691,11 +714,18 @@ export default function SupervisorDashboard() {
             </div>
 
             {/* Pending Review Queue Card */}
-            <div className="modern-panel-card glass-card">
+            <div
+              ref={reviewQueueRef}
+              className="modern-panel-card glass-card"
+              tabIndex={-1}
+              role="region"
+              aria-labelledby="priority-review-queue-title"
+              style={{ scrollMarginTop: '120px' }}
+            >
               <div className="panel-header-row">
                 <div className="panel-title-group">
                   <span className="panel-eyebrow">Direct Action Items</span>
-                  <h3 className="panel-headline">⚡ Priority Review Queue</h3>
+                  <h3 id="priority-review-queue-title" className="panel-headline">⚡ Priority Review Queue</h3>
                   <p className="panel-subtext">
                     Proposals, thesis drafts, and appointment requests submitted by your research candidates.
                   </p>
@@ -896,10 +926,11 @@ export default function SupervisorDashboard() {
                           <button
                             type="button"
                             className="btn-glow-outline btn-sm"
+                            disabled={!["approved", "ongoing", "completed"].includes(proj.status)}
                             onClick={() => {
                               setSelectedProject(proj);
                               setProgressForm({
-                                progressPercentage: proj.progressPercentage || 0,
+                                progressPercentage: proj.milestones?.length ? Math.round(proj.milestones.filter((milestone) => milestone.status === 'completed').length / proj.milestones.length * 100) : 0,
                                 status: proj.status,
                                 isPublic: proj.isPublic || false,
                               });
@@ -1300,6 +1331,8 @@ export default function SupervisorDashboard() {
                         type="button"
                         className="btn-glow-outline btn-sm delete-btn-accent"
                         onClick={() => handleDeleteDeadline(d._id)}
+                        disabled={d.createdBy !== currentUser._id}
+                        title={d.createdBy !== currentUser._id ? 'Only the creator can remove this deadline.' : 'Remove deadline'}
                       >
                         Remove 🗑
                       </button>
@@ -1534,7 +1567,7 @@ export default function SupervisorDashboard() {
                 >
                   <option value="approved">Approved</option>
                   <option value="ongoing">Ongoing</option>
-                  <option value="completed">Completed</option>
+                  <option value="completed" disabled={progressForm.progressPercentage !== 100}>Completed (all milestones required)</option>
                 </select>
               </div>
 
@@ -1542,11 +1575,12 @@ export default function SupervisorDashboard() {
                 <label>Overall Completion Percentage ({progressForm.progressPercentage}%)</label>
                 <input
                   type="range"
+                  disabled
                   min="0"
                   max="100"
                   value={progressForm.progressPercentage}
-                  onChange={(e) => setProgressForm({ ...progressForm, progressPercentage: Number(e.target.value) })}
                 />
+                <p>Progress is calculated from completed milestones. Confirm completion after all milestones are finished.</p>
               </div>
 
               <div className="form-group checkbox-group">

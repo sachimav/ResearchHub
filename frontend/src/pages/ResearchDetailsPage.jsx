@@ -1,28 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { getPublicResearchDetails } from '../services/publicService';
-import { getCurrentUser } from '../services/authService';
 
 export default function ResearchDetailsPage() {
   const { researchId } = useParams();
-  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const user = getCurrentUser();
-    if (!user) {
-      navigate(`/login?redirect=${encodeURIComponent(`/showcase/${researchId}`)}`);
-      return;
-    }
-
+    let current = true;
     getPublicResearchDetails(researchId)
-      .then(setData)
-      .catch((loadError) => setError(loadError.message));
-  }, [researchId, navigate]);
+      .then((result) => { if (current) setData({ ...result, researchId }); })
+      .catch((loadError) => { if (current) setError({ researchId, message: loadError.message }); });
+    return () => { current = false; };
+  }, [researchId]);
 
-  if (error) return <div className="container showcase-page-body"><p role="alert">{error}</p></div>;
-  if (!data) return <div className="container showcase-page-body"><p>Loading research...</p></div>;
+  if (error?.researchId === researchId) return <div className="container showcase-page-body"><p role="alert">{error.message}</p></div>;
+  if (!data || data.researchId !== researchId) return <div className="container showcase-page-body"><p>Loading research...</p></div>;
 
   const { research, documents } = data;
   return (

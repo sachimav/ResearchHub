@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const deadlineSchema = new mongoose.Schema(
   {
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "batch",
@@ -43,5 +44,7 @@ const deadlineSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+deadlineSchema.index({ batchId: 1, dueDate: 1 });
 
 export default mongoose.model("deadline", deadlineSchema);

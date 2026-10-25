@@ -24,4 +24,6 @@ const feedbackSchema = new mongoose.Schema(
   }
 );
 
+feedbackSchema.index({ researchId: 1, createdAt: -1 });
+
 export default mongoose.model("feedbacks", feedbackSchema);

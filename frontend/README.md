@@ -1,16 +1,9 @@
-# React + Vite
+# ResearchHub frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React frontend with student and supervisor dashboards, authentication, and the public research showcase.
 
-Currently, two official plugins are available:
+Install with `npm ci`, then run `npm run dev`. Start the backend separately on port 8000. Requests use `/api` through the Vite development proxy unless `VITE_API_URL` overrides it.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Run `npm test`, `npm run lint`, and `npm run build` for verification. Production hosting must provide frontend history fallback and forward `/api` to the backend, or configure an explicit API URL at build time.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+See the [project README](../README.md) for environment setup, supervisor invitations, database checks and workflow verification.

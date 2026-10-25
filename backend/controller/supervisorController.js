@@ -9,6 +9,8 @@ import Deadline from "../models/deadline.js";
 import Meeting from "../models/meeting.js";
 import Notification from "../models/notification.js";
 import User from "../models/user.js";
+import Department from "../models/department.js";
+import { activeStatuses, recalculateProgress, isWebUrl } from "../utils/researchPolicy.js";
 
 const researchStatuses = ["draft", "pending", "approved", "rejected", "ongoing", "completed"];
 const progressStatuses = ["approved", "ongoing", "completed"];
@@ -70,7 +72,7 @@ export const getDashboard = async (req, res, next) => {
         .populate("researchId", "title status")
         .sort({ meetingDate: 1 }),
       Notification.find({ userId: req.user.id }).sort({ createdAt: -1 }),
-      Student.find()
+      Student.find({ _id: { $in: await Research.distinct("studentId", { supervisorId: supervisor._id }) } })
         .populate("userId", "name email phone")
         .populate("departmentId", "name")
         .populate("batchId", "batchName academicYear"),
@@ -84,7 +86,7 @@ export const getDashboard = async (req, res, next) => {
         .populate("uploadedBy", "name email")
         .sort({ createdAt: -1 }),
       batchIds.length
-        ? Deadline.find({ batchId: { $in: batchIds } }).sort({ dueDate: 1 })
+        ? Deadline.find({ batchId: { $in: batchIds } }).populate("batchId", "batchName academicYear").sort({ dueDate: 1 })
         : [],
     ]);
 
@@ -105,7 +107,7 @@ export const getDashboard = async (req, res, next) => {
       meetings,
       notifications,
       stats: {
-        totalStudents: assignedProjects.length,
+        totalStudents: new Set(assignedProjects.map((project) => project.studentId?._id?.toString()).filter(Boolean)).size,
         activeProjects: assignedProjects.filter((p) => ["approved", "ongoing"].includes(p.status)).length,
         completedProjects: assignedProjects.filter((p) => p.status === "completed").length,
         pendingProposalsCount: pendingProposals.length,
@@ -311,11 +313,22 @@ export const getProgress = async (req, res, next) => {
       });
     }
 
+    if (!activeStatuses.includes(research.status)) return res.status(409).json({ message: "Review and approve the proposal before updating progress or publication." });
+    if (isPublic !== undefined && typeof isPublic !== "boolean") return res.status(400).json({ message: "isPublic must be a boolean." });
+    recalculateProgress(research);
+    if (progressPercentage !== undefined && progressPercentage !== research.progressPercentage) {
+      return res.status(409).json({ message: "Progress is calculated from milestones. Update milestones to change progress." });
+    }
+    if (status === "completed" && research.progressPercentage !== 100) {
+      return res.status(409).json({ message: "Complete all milestones before confirming project completion." });
+    }
+
     if (progressPercentage !== undefined) {
       research.progressPercentage = progressPercentage;
     }
     if (status !== undefined) {
       research.status = status;
+      research.endDate = status === "completed" ? new Date() : undefined;
     }
     if (isPublic !== undefined) {
       if (typeof isPublic === "boolean") {
@@ -356,6 +369,10 @@ export const manageMilestones = async (req, res, next) => {
 
     const { action, milestoneId, title, description, dueDate, status } = req.body;
 
+    if (!activeStatuses.includes(research.status)) return res.status(409).json({ message: "Approve the project before managing milestones." });
+    if (status !== undefined && !["pending", "in_progress", "completed"].includes(status)) return res.status(400).json({ message: "Invalid milestone status." });
+    if (dueDate && !Number.isFinite(new Date(dueDate).getTime())) return res.status(400).json({ message: "Invalid milestone due date." });
+
     if (action === "add") {
       if (!title || !title.trim()) {
         return res.status(400).json({ message: "Milestone title is required." });
@@ -365,6 +382,7 @@ export const manageMilestones = async (req, res, next) => {
         description: description?.trim() || "",
         dueDate: dueDate ? new Date(dueDate) : null,
         status: status || "pending",
+        completedAt: status === "completed" ? new Date() : undefined,
       });
     } else if (action === "update") {
       const milestone = research.milestones.id(milestoneId);
@@ -379,15 +397,13 @@ export const manageMilestones = async (req, res, next) => {
         milestone.completedAt = status === "completed" ? new Date() : null;
       }
     } else if (action === "delete") {
+      if (!research.milestones.id(milestoneId)) return res.status(404).json({ message: "Milestone not found." });
       research.milestones.pull(milestoneId);
     } else {
       return res.status(400).json({ message: "Valid action ('add', 'update', 'delete') is required." });
     }
 
-    if (research.milestones.length > 0) {
-      const completedCount = research.milestones.filter((m) => m.status === "completed").length;
-      research.progressPercentage = Math.round((completedCount / research.milestones.length) * 100);
-    }
+    recalculateProgress(research);
 
     await research.save();
     return res.json({ research, milestones: research.milestones });
@@ -546,6 +562,8 @@ export const scheduleMeeting = async (req, res, next) => {
     }
 
     const { researchId, meetingDate, meetingLink, location, notes } = req.body;
+    if (!Number.isFinite(new Date(meetingDate).getTime()) || new Date(meetingDate) <= new Date()) return res.status(400).json({ message: "Choose a valid future meeting date." });
+    if (meetingLink && !isWebUrl(meetingLink)) return res.status(400).json({ message: "Meeting link must use HTTP or HTTPS." });
     if (!mongoose.isValidObjectId(researchId) || !meetingDate) {
       return res.status(400).json({ message: "Valid researchId and meetingDate are required." });
     }
@@ -588,6 +606,7 @@ export const respondMeetingRequest = async (req, res, next) => {
     }
 
     const { status, meetingLink, location, notes } = req.body;
+    if (meetingLink && !isWebUrl(meetingLink)) return res.status(400).json({ message: "Meeting link must use HTTP or HTTPS." });
     if (!["scheduled", "rejected"].includes(status)) {
       return res.status(400).json({ message: "status must be 'scheduled' or 'rejected'." });
     }
@@ -597,6 +616,7 @@ export const respondMeetingRequest = async (req, res, next) => {
       return res.status(404).json({ message: "Meeting not found." });
     }
 
+    if (meeting.status !== "requested") return res.status(409).json({ message: "Only pending meeting requests can be accepted or rejected." });
     meeting.status = status;
     if (meetingLink) meeting.meetingLink = meetingLink.trim();
     if (location) meeting.location = location.trim();
@@ -637,6 +657,9 @@ export const updateMeeting = async (req, res, next) => {
     }
 
     const { meetingDate, meetingLink, location, notes, status } = req.body;
+    if (meetingDate && (!Number.isFinite(new Date(meetingDate).getTime()) || new Date(meetingDate) <= new Date())) return res.status(400).json({ message: "Choose a valid future meeting date." });
+    if (meetingLink && !isWebUrl(meetingLink)) return res.status(400).json({ message: "Meeting link must use HTTP or HTTPS." });
+    if (status && !["scheduled", "completed", "cancelled"].includes(status)) return res.status(400).json({ message: "Invalid meeting status." });
     if (meetingDate) meeting.meetingDate = new Date(meetingDate);
     if (meetingLink !== undefined) meeting.meetingLink = meetingLink.trim();
     if (location !== undefined) meeting.location = location.trim();
@@ -662,7 +685,7 @@ export const listDeadlines = async (req, res, next) => {
 
     const deadlines = batchIds.length
       ? await Deadline.find({ batchId: { $in: batchIds } }).populate("batchId", "batchName academicYear").sort({ dueDate: 1 })
-      : await Deadline.find().populate("batchId", "batchName academicYear").sort({ dueDate: 1 });
+      : [];
 
     return res.json({ deadlines });
   } catch (error) {
@@ -672,10 +695,17 @@ export const listDeadlines = async (req, res, next) => {
 
 export const createDeadline = async (req, res, next) => {
   try {
+    const supervisor = await getSupervisor(req.user.id);
+    if (!supervisor) return res.status(404).json({ message: "Supervisor profile not found." });
     const { batchId, title, description, deadlineType, dueDate } = req.body;
     if (!batchId || !title || !dueDate || !deadlineType) {
       return res.status(400).json({ message: "batchId, title, deadlineType, and dueDate are required." });
     }
+
+    if (!mongoose.isValidObjectId(batchId) || !await Research.exists({ supervisorId: supervisor._id, batchId })) {
+      return res.status(403).json({ message: "You may create deadlines only for batches you supervise." });
+    }
+    if (!Number.isFinite(new Date(dueDate).getTime()) || new Date(dueDate) <= new Date()) return res.status(400).json({ message: "Choose a valid future deadline." });
 
     const deadline = await Deadline.create({
       batchId,
@@ -683,6 +713,7 @@ export const createDeadline = async (req, res, next) => {
       description: description?.trim() || "",
       deadlineType,
       dueDate: new Date(dueDate),
+      createdBy: req.user.id,
     });
 
     // Notify all students in this batch
@@ -706,7 +737,13 @@ export const createDeadline = async (req, res, next) => {
 
 export const deleteDeadline = async (req, res, next) => {
   try {
-    await Deadline.findByIdAndDelete(req.params.deadlineId);
+    const supervisor = await getSupervisor(req.user.id);
+    if (!supervisor) return res.status(404).json({ message: "Supervisor profile not found." });
+    const batchIds = await Research.distinct("batchId", { supervisorId: supervisor._id });
+    const deleted = await Deadline.findOneAndDelete({
+      _id: req.params.deadlineId, batchId: { $in: batchIds }, createdBy: req.user.id,
+    });
+    if (!deleted) return res.status(404).json({ message: "Deadline not found or you do not own it." });
     return res.json({ message: "Deadline deleted." });
   } catch (error) {
     return next(error);
@@ -723,6 +760,12 @@ export const updateAvailability = async (req, res, next) => {
     const { availability } = req.body;
     if (!Array.isArray(availability)) {
       return res.status(400).json({ message: "availability must be an array of slots." });
+    }
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const time = /^([01]\d|2[0-3]):[0-5]\d$/;
+    if (availability.length > 50 || availability.some((slot) => !slot || !days.includes(slot.day) ||
+        !time.test(slot.startTime) || !time.test(slot.endTime) || slot.startTime >= slot.endTime)) {
+      return res.status(400).json({ message: "Use valid weekdays and start/end times; each slot must end after it starts." });
     }
 
     supervisor.availability = availability;
@@ -742,12 +785,18 @@ export const updateProfile = async (req, res, next) => {
     }
 
     const { name, phone, designation, expertise, departmentId } = req.body;
+    if (departmentId !== undefined && (!mongoose.isValidObjectId(departmentId) || !await Department.exists({ _id: departmentId }))) {
+      return res.status(400).json({ message: "Select an existing department." });
+    }
 
-    if (name || phone) {
+    if (name !== undefined || phone !== undefined) {
       const updateData = {};
-      if (name && typeof name === "string") updateData.name = name.trim();
+      if (name !== undefined) {
+        if (!name.trim()) return res.status(400).json({ message: "Name cannot be empty." });
+        updateData.name = name.trim();
+      }
       if (phone !== undefined) updateData.phone = String(phone).trim();
-      await User.findByIdAndUpdate(req.user.id, updateData);
+      await User.findByIdAndUpdate(req.user.id, updateData, { runValidators: true });
     }
 
     if (designation) supervisor.designation = designation.trim();

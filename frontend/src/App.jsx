@@ -11,6 +11,7 @@ import ResearchDetailsPage from './pages/ResearchDetailsPage';
 import AuthPage from './pages/AuthPage';
 import StudentDashboard from './pages/StudentDashboard';
 import SupervisorDashboard from './pages/SupervisorDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function ScrollToTop() {
   const { pathname, search } = useLocation();
@@ -34,6 +35,8 @@ function HomePage() {
 }
 
 function App() {
+  const location = useLocation();
+  const authKey = location.pathname + location.search;
   return (
     <div className="researchhub-app">
       <ScrollToTop />
@@ -42,12 +45,13 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/showcase" element={<ShowcasePage />} />
-          <Route path="/showcase/:researchId" element={<ResearchDetailsPage />} />
-          <Route path="/student/dashboard" element={<StudentDashboard />} />
-          <Route path="/supervisor/dashboard" element={<SupervisorDashboard />} />
-          <Route path="/login" element={<AuthPage initialMode="login" />} />
-          <Route path="/register" element={<AuthPage initialMode="register" />} />
-          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/showcase/:researchId" element={<ProtectedRoute><ResearchDetailsPage /></ProtectedRoute>} />
+          <Route path="/student/dashboard" element={<ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>} />
+          <Route path="/supervisor/dashboard" element={<ProtectedRoute role="supervisor"><SupervisorDashboard /></ProtectedRoute>} />
+          <Route path="/login" element={<AuthPage key={authKey} initialMode="login" />} />
+          <Route path="/register" element={<AuthPage key={authKey} initialMode="register" />} />
+          <Route path="/auth" element={<AuthPage key={authKey} />} />
+          <Route path="*" element={<div className="container showcase-page-body"><h1>Page not found</h1><a href="/">Return home</a></div>} />
         </Routes>
       </main>
       <Footer />

@@ -37,6 +37,12 @@ export default function StudentDashboard() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [visitedTabs, setVisitedTabs] = useState({});
+
+  const selectTab = (tab) => {
+    setActiveTab(tab);
+    setVisitedTabs((previous) => ({ ...previous, [tab]: true }));
+  };
 
   // Modals state
   const [showProposalModal, setShowProposalModal] = useState(false);
@@ -197,7 +203,7 @@ export default function StudentDashboard() {
 
   const handleMeetingRequest = async (e) => {
     e.preventDefault();
-    const supId = meetingForm.supervisorId || dashboardData?.research?.supervisorId?._id;
+    const supId = dashboardData?.research?.supervisorId?._id;
     if (!supId) {
       alert('Please select a supervisor for this meeting.');
       return;
@@ -400,7 +406,7 @@ export default function StudentDashboard() {
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'overview' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('overview')}
+                  onClick={() => selectTab('overview')}
                 >
                   <span className="nav-icon">📊</span>
                   <span className="nav-text">Overview</span>
@@ -408,43 +414,43 @@ export default function StudentDashboard() {
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'milestones' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('milestones')}
+                  onClick={() => selectTab('milestones')}
                 >
                   <span className="nav-icon">🎯</span>
                   <span className="nav-text">Milestones</span>
-                  <span className="pill-counter">{completedMilestones}/{milestones.length}</span>
+                  {!visitedTabs.milestones && <span className="pill-counter">{completedMilestones}/{milestones.length}</span>}
                 </button>
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'documents' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('documents')}
+                  onClick={() => selectTab('documents')}
                 >
                   <span className="nav-icon">📂</span>
                   <span className="nav-text">Deliverables</span>
-                  <span className="pill-counter">{documents.length}</span>
+                  {!visitedTabs.documents && <span className="pill-counter">{documents.length}</span>}
                 </button>
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'supervisor' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('supervisor')}
+                  onClick={() => selectTab('supervisor')}
                 >
                   <span className="nav-icon">👨‍🏫</span>
                   <span className="nav-text">Supervisor &amp; Feedback</span>
-                  {feedback.length > 0 && <span className="pill-counter">{feedback.length}</span>}
+                  {!visitedTabs.supervisor && feedback.length > 0 && <span className="pill-counter">{feedback.length}</span>}
                 </button>
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'meetings' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('meetings')}
+                  onClick={() => selectTab('meetings')}
                 >
                   <span className="nav-icon">🗓</span>
                   <span className="nav-text">Meetings &amp; Deadlines</span>
-                  {meetings.length > 0 && <span className="pill-counter">{meetings.length}</span>}
+                  {!visitedTabs.meetings && meetings.length > 0 && <span className="pill-counter">{meetings.length}</span>}
                 </button>
                 <button
                   type="button"
                   className={`vertical-tab-item ${activeTab === 'notifications' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('notifications')}
+                  onClick={() => selectTab('notifications')}
                 >
                   <span className="nav-icon">🔔</span>
                   <span className="nav-text">Updates</span>
@@ -1357,7 +1363,7 @@ export default function StudentDashboard() {
                   onChange={(e) => setDocForm({ ...docForm, visibility: e.target.value })}
                 >
                   <option value="private">Private (Supervisor &amp; Reviewers only)</option>
-                  <option value="public">Public (Showcased on University Repository)</option>
+                  <option value="public">Public after supervisor approval and project publication</option>
                 </select>
               </div>
 
@@ -1391,9 +1397,10 @@ export default function StudentDashboard() {
                   value={meetingForm.supervisorId || currentSupervisor?._id || ''}
                   onChange={(e) => setMeetingForm({ ...meetingForm, supervisorId: e.target.value })}
                   required
+                  disabled
                 >
                   <option value="">-- Choose Supervisor --</option>
-                  {supervisors.map((s) => (
+                  {supervisors.filter((s) => s._id === currentSupervisor?._id).map((s) => (
                     <option key={s._id} value={s._id}>
                       {s.userId?.name} ({s.designation})
                     </option>

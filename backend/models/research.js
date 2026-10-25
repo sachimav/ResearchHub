@@ -100,7 +100,12 @@ const researchSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    optimisticConcurrency: true,
   }
 );
+
+researchSchema.index({ studentId: 1, updatedAt: -1 });
+researchSchema.index({ supervisorId: 1, status: 1 });
+researchSchema.index({ isPublic: 1, status: 1, updatedAt: -1 });
 
 export default mongoose.model("research", researchSchema);

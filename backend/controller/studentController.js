@@ -9,6 +9,7 @@ import Feedback from "../models/feedback.js";
 import Notification from "../models/notification.js";
 import Meeting from "../models/meeting.js";
 import User from "../models/user.js";
+import { activeStatuses, recalculateProgress, isWebUrl } from "../utils/researchPolicy.js";
 
 const getStudent = (userId) =>
   Student.findOne({ userId })
@@ -84,11 +85,14 @@ export const updateProfile = async (req, res, next) => {
     }
 
     const { name, phone, program } = req.body;
-    if (name || phone) {
+    if (name !== undefined || phone !== undefined) {
       const updateData = {};
-      if (name && typeof name === "string") updateData.name = name.trim();
+      if (name !== undefined) {
+        if (!name.trim()) return res.status(400).json({ message: "Name cannot be empty." });
+        updateData.name = name.trim();
+      }
       if (phone !== undefined) updateData.phone = String(phone).trim();
-      await User.findByIdAndUpdate(req.user.id, updateData);
+      await User.findByIdAndUpdate(req.user.id, updateData, { runValidators: true });
     }
 
     if (program && typeof program === "string") {
@@ -231,9 +235,15 @@ export const createResearch = async (req, res, next) => {
     }
 
     let assignedSupervisor = null;
-    if (supervisorId && mongoose.isValidObjectId(supervisorId)) {
+    if (supervisorId) {
+      if (!mongoose.isValidObjectId(supervisorId) || !await Supervisor.exists({ _id: supervisorId })) {
+        return res.status(400).json({ message: "Select an existing supervisor." });
+      }
       assignedSupervisor = supervisorId;
     }
+
+    if (submit !== undefined && typeof submit !== "boolean") return res.status(400).json({ message: "submit must be a boolean." });
+    if (submit === true && !assignedSupervisor) return res.status(400).json({ message: "Select a supervisor before submitting." });
 
     const initialStatus = submit === true ? "pending" : "draft";
 
@@ -331,9 +341,12 @@ export const updateResearch = async (req, res, next) => {
 
     if (req.body.supervisorId !== undefined) {
       if (req.body.supervisorId && mongoose.isValidObjectId(req.body.supervisorId)) {
+        if (!await Supervisor.exists({ _id: req.body.supervisorId })) return res.status(400).json({ message: "Supervisor not found." });
         research.supervisorId = req.body.supervisorId;
       } else if (req.body.supervisorId === null || req.body.supervisorId === "") {
         research.supervisorId = null;
+      } else {
+        return res.status(400).json({ message: "Invalid supervisor ID." });
       }
     }
 
@@ -342,6 +355,7 @@ export const updateResearch = async (req, res, next) => {
     }
 
     if (req.body.submit === true) {
+      if (!research.supervisorId) return res.status(400).json({ message: "Select a supervisor before submitting." });
       research.status = "pending";
       if (research.supervisorId) {
         const sup = await Supervisor.findById(research.supervisorId).select("userId");
@@ -373,7 +387,10 @@ export const updateMilestone = async (req, res, next) => {
     }
 
     const { researchId, milestoneId } = req.params;
-    const { status, completedAt } = req.body;
+    const { status } = req.body;
+    if (!["pending", "in_progress", "completed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid milestone status." });
+    }
 
     const research = await Research.findOne({ _id: researchId, studentId: student._id });
     if (!research) {
@@ -385,23 +402,18 @@ export const updateMilestone = async (req, res, next) => {
       return res.status(404).json({ message: "Milestone not found." });
     }
 
+    if (!activeStatuses.includes(research.status)) return res.status(409).json({ message: "Only approved projects can update milestones." });
+
     if (status && ["pending", "in_progress", "completed"].includes(status)) {
       milestone.status = status;
       if (status === "completed" && !milestone.completedAt) {
-        milestone.completedAt = completedAt ? new Date(completedAt) : new Date();
+        milestone.completedAt = new Date();
       } else if (status !== "completed") {
         milestone.completedAt = null;
       }
     }
 
-    // Auto-calculate progress percentage based on completed milestones
-    if (research.milestones.length > 0) {
-      const completedCount = research.milestones.filter((m) => m.status === "completed").length;
-      research.progressPercentage = Math.round((completedCount / research.milestones.length) * 100);
-      if (research.progressPercentage === 100 && research.status === "ongoing") {
-        research.status = "completed";
-      }
-    }
+    recalculateProgress(research);
 
     await research.save();
     return res.json({ research, milestone });
@@ -449,7 +461,7 @@ export const createDocument = async (req, res, next) => {
       typeof title !== "string" ||
       !title.trim() ||
       typeof fileUrl !== "string" ||
-      !fileUrl.trim() ||
+      !isWebUrl(fileUrl) ||
       !allowedDocumentTypes.includes(documentType)
     ) {
       return res.status(400).json({
@@ -507,6 +519,13 @@ export const requestMeeting = async (req, res, next) => {
     const supervisor = await Supervisor.findById(supervisorId).populate("userId", "name");
     if (!supervisor) {
       return res.status(404).json({ message: "Supervisor not found." });
+    }
+
+    if (research.supervisorId?.toString() !== supervisor._id.toString()) {
+      return res.status(403).json({ message: "Meetings must be requested with your assigned supervisor." });
+    }
+    if (!Number.isFinite(new Date(meetingDate).getTime()) || new Date(meetingDate) <= new Date()) {
+      return res.status(400).json({ message: "Choose a valid future meeting date." });
     }
 
     const meeting = await Meeting.create({

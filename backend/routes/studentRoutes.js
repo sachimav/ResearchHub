@@ -1,3 +1,4 @@
+import { validateIds } from "../middleware/validateIds.js";
 import { Router } from "express";
 
 import {
@@ -21,6 +22,7 @@ import {
 import { protect, requireRole } from "../middleware/authMiddleware.js";
 
 const router = Router();
+for (const name of ["researchId", "milestoneId", "notificationId", "documentId", "meetingId", "deadlineId"]) router.param(name, validateIds);
 
 router.use(protect, requireRole("student"));
 
