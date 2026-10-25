@@ -5,8 +5,6 @@ import {
   loginUser,
   getCurrentUser,
   isValidEmail,
-  emailExists,
-  regNoExists,
   getRegistrationOptions,
   DEGREE_PROGRAMS,
   SUPERVISOR_DESIGNATIONS
@@ -43,6 +41,7 @@ export default function AuthPage({ initialMode = 'login' }) {
     // Supervisor model fields (supervisor.js)
     designation: '',
     expertise: '',
+    invitationToken: '',
     // Public User model fields (user.js extended)
     institution: '',
     phone: ''
@@ -140,11 +139,6 @@ export default function AuthPage({ initialMode = 'login' }) {
         errs.confirmPassword = 'Password and Confirm Password do not match.';
       }
 
-      // Duplicate email check (unique in user.js)
-      if (formData.email.trim() && isValidEmail(formData.email) && emailExists(formData.email)) {
-        errs.email = 'An account with this email already exists. Please login.';
-      }
-
       if (isValidEmail(formData.email)) {
         const emailDomain = formData.email.trim().toLowerCase().split('@')[1];
         if (selectedRole === 'student' && emailDomain !== 'stu.vau.ac.lk') {
@@ -159,8 +153,6 @@ export default function AuthPage({ initialMode = 'login' }) {
         const regNo = (formData.regNo || '').trim().toUpperCase();
         if (!regNo) {
           errs.regNo = 'Student Registration Number (e.g. 2020/ICT/042) is required.';
-        } else if (regNoExists(regNo)) {
-          errs.regNo = `Registration Number "${regNo}" is already registered.`;
         }
 
         if (!formData.department.trim()) {
@@ -178,6 +170,7 @@ export default function AuthPage({ initialMode = 'login' }) {
 
       // ── Role: Supervisor (models/supervisor.js) ──
       if (selectedRole === 'supervisor') {
+        if (!formData.invitationToken.trim()) errs.invitationToken = 'Enter the invitation provided by your administrator.';
         if (!formData.designation.trim()) {
           errs.designation = 'Academic Designation is required.';
         }
@@ -253,9 +246,9 @@ export default function AuthPage({ initialMode = 'login' }) {
   const handleCloseSuccessPopup = () => {
     setShowSuccessPopup(false);
 
-    if (successPopupMode === 'login') {
+    if (getCurrentUser()) {
       const redirectPath = searchParams.get('redirect');
-      if (redirectPath) {
+      if (redirectPath?.startsWith('/') && !redirectPath.startsWith('//') && !redirectPath.includes('\\')) {
         navigate(redirectPath);
         return;
       }
@@ -589,6 +582,13 @@ export default function AuthPage({ initialMode = 'login' }) {
                       </div>
                     </div>
 
+                    <div className="form-group">
+                      <label className="input-label" htmlFor="auth-invitation">Supervisor invitation <span className="field-required">*</span></label>
+                      <input id="auth-invitation" type="password" className="form-input-styled" value={formData.invitationToken}
+                        onChange={(e) => handleInputChange('invitationToken', e.target.value)} autoComplete="off" />
+                      <span className="input-helper">Ask your administrator for an invitation issued for your university email.</span>
+                      {errors.invitationToken && <span className="error-text">{errors.invitationToken}</span>}
+                    </div>
                     {/* expertise (supervisor.js: expertise array) */}
                     <div className="form-group">
                       <label className="input-label" htmlFor="auth-expertise">
@@ -816,7 +816,7 @@ export default function AuthPage({ initialMode = 'login' }) {
                 onClick={handleCloseSuccessPopup}
               >
                 <span>
-                  {successPopupMode === 'login' ? 'Continue to Showcase' : 'Proceed to Login'}
+                  Continue to ResearchHub
                 </span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M5 12h14M12 5l7 7-7 7" />

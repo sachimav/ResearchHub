@@ -8,6 +8,7 @@ const publicStatuses = ["approved", "ongoing", "completed"];
 const researchPopulation = [
   {
     path: "studentId",
+    select: "userId departmentId batchId",
     populate: [
       { path: "userId", select: "name" },
       { path: "departmentId", select: "name" },
@@ -16,6 +17,7 @@ const researchPopulation = [
   },
   {
     path: "supervisorId",
+    select: "userId designation",
     populate: { path: "userId", select: "name designation" },
   },
 ];
@@ -28,11 +30,17 @@ const getPublicResearch = (researchId) => {
     _id: researchId,
     isPublic: true,
     status: { $in: publicStatuses },
-  }).populate(researchPopulation);
+  }).select("title description topic academicYear status progressPercentage studentId supervisorId updatedAt")
+    .populate(researchPopulation);
 };
 
 export const listResearch = async (req, res, next) => {
   try {
+    const page = Number(req.query.page ?? 1);
+    const limit = Number(req.query.limit ?? 12);
+    if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(limit) || limit < 1 || limit > 100 || (page - 1) * limit > 1000000) {
+      return res.status(400).json({ message: "page must be a positive integer and limit must be between 1 and 100." });
+    }
     const filter = {
       isPublic: true,
       status: { $in: publicStatuses },
@@ -76,11 +84,14 @@ export const listResearch = async (req, res, next) => {
       filter.academicYear = req.query.academicYear.trim();
     }
 
-    const research = await Research.find(filter)
+    const [research, total] = await Promise.all([Research.find(filter)
+      .select("title description topic academicYear status progressPercentage studentId supervisorId updatedAt")
       .populate(researchPopulation)
-      .sort({ updatedAt: -1 });
+      .sort({ updatedAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit),
+      Research.countDocuments(filter),
+    ]);
 
-    return res.json({ research });
+    return res.json({ research, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
   } catch (error) {
     return next(error);
   }
@@ -96,7 +107,8 @@ export const getResearchDetails = async (req, res, next) => {
     const documents = await Document.find({
       researchId: research._id,
       visibility: "public",
-    }).sort({ createdAt: -1 });
+      status: "approved",
+    }).select("title fileUrl documentType createdAt").sort({ createdAt: -1 });
 
     return res.json({ research, documents });
   } catch (error) {

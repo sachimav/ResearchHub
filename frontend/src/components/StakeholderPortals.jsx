@@ -85,7 +85,7 @@ export default function StakeholderPortals() {
         </div>
 
         {/* Dual Entry Gateways with the Two Buttons */}
-        <div className="portal-gateways-container">
+        <div id="get-started" className="portal-gateways-container" style={{ scrollMarginTop: '120px' }}>
           <div className="portal-gateways-header">
             <h3 className="gateways-heading">Get Started</h3>
 

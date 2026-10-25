@@ -171,5 +171,6 @@ export const seedDatabase = async () => {
     }
   } catch (err) {
     console.error("Database seed error:", err.message);
+    throw err;
   }
 };

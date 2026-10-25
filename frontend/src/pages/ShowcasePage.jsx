@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getPublicResearch } from '../services/publicService';
-import { getCurrentUser } from '../services/authService';
+import { getCurrentUser } from '../services/session';
 
 const statusLabels = {
   ongoing: 'Ongoing',
@@ -9,30 +9,35 @@ const statusLabels = {
 };
 
 export default function ShowcasePage() {
-  const currentUser = getCurrentUser();
   const [research, setResearch] = useState([]);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
 
   useEffect(() => {
+    let current = true;
     const loadResearch = async () => {
       setLoading(true);
       setError('');
       try {
-        const data = await getPublicResearch({ query, status });
-        setResearch(data.research || []);
+        const data = await getPublicResearch({ query, status, page });
+        if (current) {
+          setResearch(data.research || []);
+          setPagination(data.pagination);
+        }
       } catch (loadError) {
-        setError(loadError.message);
+        if (current) setError(loadError.message);
       } finally {
-        setLoading(false);
+        if (current) setLoading(false);
       }
     };
 
     const timeoutId = window.setTimeout(loadResearch, 250);
-    return () => window.clearTimeout(timeoutId);
-  }, [query, status]);
+    return () => { current = false; window.clearTimeout(timeoutId); };
+  }, [query, status, page]);
 
   return (
     <div className="showcase-page">
@@ -57,25 +62,25 @@ export default function ShowcasePage() {
               className="showcase-search-input"
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => { setQuery(event.target.value); setPage(1); }}
               placeholder="Search by title, topic, description, or academic year"
               aria-label="Search research"
             />
             {query && (
-              <button className="clear-search-btn" type="button" onClick={() => setQuery('')}>
+              <button className="clear-search-btn" type="button" onClick={() => { setQuery(''); setPage(1); }}>
                 ×
               </button>
             )}
           </div>
           <div className="category-pills-list" aria-label="Research status">
-            <button className={`category-pill-btn ${!status ? 'active' : ''}`} type="button" onClick={() => setStatus('')}>
+            <button className={`category-pill-btn ${!status ? 'active' : ''}`} type="button" onClick={() => { setStatus(''); setPage(1); }}>
               All research
             </button>
             {Object.entries(statusLabels).map(([value, label]) => (
               <button
                 className={`category-pill-btn ${status === value ? 'active' : ''}`}
                 type="button"
-                onClick={() => setStatus(value)}
+                onClick={() => { setStatus(value); setPage(1); }}
                 key={value}
               >
                 {label}
@@ -85,7 +90,7 @@ export default function ShowcasePage() {
         </div>
 
         <div className="results-meta-row">
-          <span>{loading ? 'Loading research...' : `${research.length} research project${research.length === 1 ? '' : 's'}`}</span>
+          <span>{loading ? 'Loading research...' : `${pagination?.total ?? research.length} research projects`}</span>
           <span className="verified-badge">● Public university research</span>
         </div>
 
@@ -132,11 +137,9 @@ export default function ShowcasePage() {
                 <span>{project.progressPercentage || 0}% progress</span>
                 <Link
                   className="btn btn-primary btn-sm"
-                  to={
-                    currentUser
-                      ? `/showcase/${project._id}`
-                      : `/login?redirect=${encodeURIComponent(`/showcase/${project._id}`)}`
-                  }
+                  to={getCurrentUser()
+                    ? `/showcase/${project._id}`
+                    : `/login?redirect=${encodeURIComponent(`/showcase/${project._id}`)}`}
                 >
                   View full research
                 </Link>
@@ -144,6 +147,13 @@ export default function ShowcasePage() {
             </article>
           ))}
         </div>
+        {pagination?.pages > 1 && !error && (
+          <nav className="results-meta-row" aria-label="Research pages">
+            <button className="btn btn-primary btn-sm" disabled={loading || page === 1} onClick={() => setPage(page - 1)}>Previous</button>
+            <span>Page {page} of {pagination.pages}</span>
+            <button className="btn btn-primary btn-sm" disabled={loading || page >= pagination.pages} onClick={() => setPage(page + 1)}>Next</button>
+          </nav>
+        )}
       </div>
     </div>
   );

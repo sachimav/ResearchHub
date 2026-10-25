@@ -62,4 +62,6 @@ const documentSchema = new mongoose.Schema(
   }
 );
 
+documentSchema.index({ researchId: 1, visibility: 1, status: 1, createdAt: -1 });
+
 export default mongoose.model("documents", documentSchema);

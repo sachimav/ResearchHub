@@ -7,8 +7,8 @@ import Student from "../models/Student.js";
 import Supervisor from "../models/supervisor.js";
 import Department from "../models/department.js";
 import Batch from "../models/batch.js";
+import { getJwtSecret } from "../config/env.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "researchhub-dev-secret";
 
 const createToken = (user) =>
   jwt.sign(
@@ -17,8 +17,8 @@ const createToken = (user) =>
       email: user.email,
       role: user.role,
     },
-    JWT_SECRET,
-    { expiresIn: "7d" }
+    getJwtSecret(),
+    { expiresIn: "7d", algorithm: "HS256", audience: "researchhub-api" }
   );
 
 //reomve password before sending to frontend
@@ -86,7 +86,7 @@ const getBatchById = async (batchId) => {
   return Batch.findById(batchId);
 };
 
-export const getRegistrationOptions = async (_req, res) => {
+export const getRegistrationOptions = async (_req, res, next) => {
   try {
     const [departments, batches] = await Promise.all([
       Department.find().select("_id name").sort({ name: 1 }),
@@ -95,11 +95,12 @@ export const getRegistrationOptions = async (_req, res) => {
 
     return res.status(200).json({ departments, batches });
   } catch (error) {
-    return res.status(500).json({ message: error.message || "Unable to fetch registration options." });
+    return next(error);
   }
 };
 
-export const registerUser = async (req, res) => {
+export const registerUser = async (req, res, next) => {
+  let pendingUserId;
   try {
     const {
       name,
@@ -115,7 +116,17 @@ export const registerUser = async (req, res) => {
       expertise,
       institution,
       phone,
+      invitationToken,
     } = req.body;
+
+    const textFields = { name, email, password, confirmPassword, role, regNo, department, batch, program, designation, institution, phone, invitationToken };
+    if (Object.values(textFields).some((value) => value !== undefined && typeof value !== "string")) {
+      return res.status(400).json({ message: "Registration fields must be strings." });
+    }
+    if (expertise !== undefined && typeof expertise !== "string" &&
+        !(Array.isArray(expertise) && expertise.every((item) => typeof item === "string"))) {
+      return res.status(400).json({ message: "Expertise must be text or an array of strings." });
+    }
 
     const selectedRole = (role || "student").toLowerCase();
 
@@ -141,6 +152,17 @@ export const registerUser = async (req, res) => {
 
     if (selectedRole === "supervisor" && emailDomain !== "vau.ac.lk") {
       return res.status(400).json({ message: "Supervisor accounts must use an @vau.ac.lk email address." });
+    }
+
+    if (selectedRole === "supervisor") {
+      try {
+        const invitation = jwt.verify(invitationToken, getJwtSecret(), {
+          algorithms: ["HS256"], audience: "researchhub-registration",
+        });
+        if (invitation.email !== normalizedEmail) throw new Error("Email mismatch");
+      } catch {
+        return res.status(403).json({ message: "A valid supervisor invitation for this email is required." });
+      }
     }
 
     if (!password) {
@@ -207,7 +229,9 @@ export const registerUser = async (req, res) => {
         email: normalizedEmail,
         password: await bcrypt.hash(password, 10),
         role: "student",
+        isActive: false,
       });
+      pendingUserId = createdUser._id;
 
       const studentDoc = await Student.create({
         userId: createdUser._id,
@@ -216,6 +240,9 @@ export const registerUser = async (req, res) => {
         batchId: batchDoc._id,
         program: program.trim(),
       });
+
+      createdUser.isActive = true;
+      await createdUser.save();
 
       const token = createToken(createdUser);
 
@@ -256,7 +283,9 @@ export const registerUser = async (req, res) => {
         email: normalizedEmail,
         password: await bcrypt.hash(password, 10),
         role: "supervisor",
+        isActive: false,
       });
+      pendingUserId = createdUser._id;
 
       const supervisorDoc = await Supervisor.create({
         userId: createdUser._id,
@@ -264,6 +293,9 @@ export const registerUser = async (req, res) => {
         designation: designation.trim(),
         expertise: expertiseList,
       });
+
+      createdUser.isActive = true;
+      await createdUser.save();
 
       const token = createToken(createdUser);
 
@@ -313,13 +345,25 @@ export const registerUser = async (req, res) => {
       user: sanitizeUser(createdUser),
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message || "Registration failed." });
+    if (pendingUserId) {
+      try {
+        await Student.deleteOne({ userId: pendingUserId });
+        await Supervisor.deleteOne({ userId: pendingUserId });
+        await User.deleteOne({ _id: pendingUserId });
+      } catch (cleanupError) {
+        console.error("Registration cleanup failed for inactive account", pendingUserId, cleanupError);
+      }
+    }
+    return next(error);
   }
 };
 
-export const loginUser = async (req, res) => {
+export const loginUser = async (req, res, next) => {
   try {
     const { email, password, role } = req.body;
+    if (typeof email !== "string" || typeof password !== "string" || (role !== undefined && typeof role !== "string")) {
+      return res.status(400).json({ message: "Email, password, and role must be strings." });
+    }
 
     if (!email || !email.trim()) {
       return res.status(400).json({ message: "Email is required." });
@@ -333,13 +377,15 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
-      return res.status(401).json({ message: "No account found with this email." });
+      return res.status(401).json({ message: "Invalid email or password." });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      return res.status(401).json({ message: "Incorrect password." });
+      return res.status(401).json({ message: "Invalid email or password." });
     }
+
+    if (!user.isActive) return res.status(403).json({ message: "This account is inactive. Contact the administrator." });
 
     if (role && user.role !== role.toLowerCase()) {
       return res.status(403).json({
@@ -361,11 +407,11 @@ export const loginUser = async (req, res) => {
       profile,
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message || "Login failed." });
+    return next(error);
   }
 };
 
-export const getCurrentUser = async (req, res) => {
+export const getCurrentUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
 
@@ -375,6 +421,6 @@ export const getCurrentUser = async (req, res) => {
 
     return res.status(200).json({ user: sanitizeUser(user) });
   } catch (error) {
-    return res.status(500).json({ message: error.message || "Unable to fetch user profile." });
+    return next(error);
   }
 };

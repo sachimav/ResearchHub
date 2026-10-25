@@ -38,11 +38,11 @@ export default function Hero() {
             </Link>
 
             <a
-              href="#portals"
+              href="#get-started"
               className="btn btn-glass-light"
               onClick={(e) => {
                 e.preventDefault();
-                const el = document.getElementById('portals');
+                const el = document.getElementById('get-started');
                 if (el) {
                   el.scrollIntoView({ behavior: 'smooth' });
                 }

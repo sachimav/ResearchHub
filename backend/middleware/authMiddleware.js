@@ -1,6 +1,10 @@
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+import User from "../models/user.js";
+import { getJwtSecret } from "../config/env.js";
 
-export const protect = (req, res, next) => {
+export const protect = async (req, res, next) => {
+  let decoded;
   try {
     const authHeader = req.headers.authorization || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
@@ -9,18 +13,20 @@ export const protect = (req, res, next) => {
       return res.status(401).json({ message: "Authentication token missing." });
     }
 
-    const secret = process.env.JWT_SECRET || "researchhub-dev-secret";
-    const decoded = jwt.verify(token, secret);
-
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      role: decoded.role,
-    };
-
+    decoded = jwt.verify(token, getJwtSecret(), { algorithms: ["HS256"], audience: "researchhub-api" });
+    if (!mongoose.isValidObjectId(decoded.id)) throw new Error("Invalid subject");
+  } catch {
+    return res.status(401).json({ message: "Invalid or expired token." });
+  }
+  try {
+    const user = await User.findById(decoded.id).select("email role isActive");
+    if (!user || !user.isActive) {
+      return res.status(401).json({ message: "This account is unavailable or inactive." });
+    }
+    req.user = { id: user._id.toString(), email: user.email, role: user.role };
     return next();
   } catch (error) {
-    return res.status(401).json({ message: "Invalid or expired token." });
+    return next(error);
   }
 };
 

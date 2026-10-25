@@ -53,4 +53,7 @@ const meetingSchema = new mongoose.Schema(
   }
 );
 
+meetingSchema.index({ studentId: 1, meetingDate: 1 });
+meetingSchema.index({ supervisorId: 1, meetingDate: 1 });
+
 export default mongoose.model("meetings", meetingSchema);
