@@ -11,6 +11,7 @@ import Notification from "../models/notification.js";
 import User from "../models/user.js";
 import Department from "../models/department.js";
 import { activeStatuses, recalculateProgress, isWebUrl } from "../utils/researchPolicy.js";
+import { missingDocuments } from "../utils/submissionRequirements.js";
 
 const researchStatuses = ["draft", "pending", "approved", "rejected", "ongoing", "completed"];
 const progressStatuses = ["approved", "ongoing", "completed"];
@@ -321,6 +322,10 @@ export const getProgress = async (req, res, next) => {
     }
     if (status === "completed" && research.progressPercentage !== 100) {
       return res.status(409).json({ message: "Complete all milestones before confirming project completion." });
+    }
+    if (status === "completed") {
+      const missing = await missingDocuments(research, "completion");
+      if (missing.length) return res.status(409).json({ message: `Approve required completion documents first: ${missing.join(", ")}.` });
     }
 
     if (progressPercentage !== undefined) {

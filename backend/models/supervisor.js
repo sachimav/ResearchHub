@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const supervisorSchema = new mongoose.Schema(
   {
+    maxActiveProjects: { type: Number, default: 10, min: 1, max: 1000 },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "users",

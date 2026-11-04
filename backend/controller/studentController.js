@@ -10,6 +10,8 @@ import Notification from "../models/notification.js";
 import Meeting from "../models/meeting.js";
 import User from "../models/user.js";
 import { activeStatuses, recalculateProgress, isWebUrl } from "../utils/researchPolicy.js";
+import { MilestoneTemplate, SystemSettings } from "../models/adminConfiguration.js";
+import { missingDocuments } from "../utils/submissionRequirements.js";
 
 const getStudent = (userId) =>
   Student.findOne({ userId })
@@ -247,6 +249,17 @@ export const createResearch = async (req, res, next) => {
 
     const initialStatus = submit === true ? "pending" : "draft";
 
+    const settings = await SystemSettings.findById("system");
+    if (req.body.templateId !== undefined && (typeof req.body.templateId !== "string" || !mongoose.isObjectIdOrHexString(req.body.templateId))) return res.status(400).json({ message: "templateId must be a valid template ID when provided." });
+    const templateId = req.body.templateId ?? settings?.defaultMilestoneTemplateId;
+    let template = null;
+    if (templateId) {
+      if (!mongoose.isObjectIdOrHexString(templateId)) return res.status(400).json({ message: "Invalid milestone template ID." });
+      template = await MilestoneTemplate.findOne({ _id: templateId, isActive: true });
+      if (!template || (template.departmentId && String(template.departmentId) !== String(student.departmentId))) return res.status(400).json({ message: "Select an active milestone template for your department." });
+    }
+    if (submit === true && template?.requiredDocuments.some((item) => item.stage === "proposal")) return res.status(409).json({ message: "Save a draft and attach the required proposal documents before submitting." });
+
     const research = await Research.create({
       studentId: student._id,
       supervisorId: assignedSupervisor,
@@ -256,7 +269,9 @@ export const createResearch = async (req, res, next) => {
       topic: topic?.trim(),
       academicYear: normalizedAcademicYear,
       status: initialStatus,
-      milestones: defaultMilestones,
+      templateId: template?._id || null,
+      requiredDocuments: template?.requiredDocuments.map((item) => ({ documentType: item.documentType, stage: item.stage })) || [],
+      milestones: template ? template.milestones.map((item) => ({ title: item.title, description: item.description, dueDate: new Date(Date.now() + item.offsetDays * 86400000), status: "pending" })) : defaultMilestones,
     });
 
     if (assignedSupervisor && initialStatus === "pending") {
@@ -356,6 +371,8 @@ export const updateResearch = async (req, res, next) => {
 
     if (req.body.submit === true) {
       if (!research.supervisorId) return res.status(400).json({ message: "Select a supervisor before submitting." });
+      const missing = await missingDocuments(research, "proposal");
+      if (missing.length) return res.status(409).json({ message: `Submit required proposal documents first: ${missing.join(", ")}.` });
       research.status = "pending";
       if (research.supervisorId) {
         const sup = await Supervisor.findById(research.supervisorId).select("userId");

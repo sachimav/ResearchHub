@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.js";
 import publicRoutes from "./routes/publicRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import supervisorRoutes from "./routes/supervisorRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/rh/public", publicRoutes);
 app.use("/api/student", studentRoutes);

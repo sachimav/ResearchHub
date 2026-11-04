@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const studentSchema = new mongoose.Schema(
   {
+    programId: { type: mongoose.Schema.Types.ObjectId, ref: "degreePrograms", default: null },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "users",

@@ -2,6 +2,11 @@ import mongoose from "mongoose";
 
 const researchSchema = new mongoose.Schema(
   {
+    templateId: { type: mongoose.Schema.Types.ObjectId, ref: "milestoneTemplates", default: null },
+    requiredDocuments: [{
+      documentType: { type: String, enum: ["proposal", "report", "progress_report", "final_report", "other"], required: true },
+      stage: { type: String, enum: ["proposal", "progress", "completion"], required: true },
+    }],
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "students",

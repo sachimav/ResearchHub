@@ -8,6 +8,7 @@ import Supervisor from "../models/supervisor.js";
 import Department from "../models/department.js";
 import Batch from "../models/batch.js";
 import { getJwtSecret } from "../config/env.js";
+import { DegreeProgram, MilestoneTemplate } from "../models/adminConfiguration.js";
 
 
 const createToken = (user) =>
@@ -75,7 +76,8 @@ const getDepartmentById = async (departmentId) => {
     return null;
   }
 
-  return Department.findById(departmentId);
+  const department = await Department.findById(departmentId);
+  return department?.isActive === false ? null : department;
 };
 
 const getBatchById = async (batchId) => {
@@ -83,17 +85,21 @@ const getBatchById = async (batchId) => {
     return null;
   }
 
-  return Batch.findById(batchId);
+  const batch = await Batch.findById(batchId);
+  return batch?.isActive === false ? null : batch;
 };
 
 export const getRegistrationOptions = async (_req, res, next) => {
   try {
-    const [departments, batches] = await Promise.all([
-      Department.find().select("_id name").sort({ name: 1 }),
-      Batch.find().select("_id batchName academicYear").sort({ academicYear: -1 }),
+    const [departments, batches, programs, milestoneTemplates] = await Promise.all([
+      Department.find({ isActive: { $ne: false } }).select("_id name").sort({ name: 1 }),
+      Batch.find({ isActive: { $ne: false } }).select("_id batchName academicYear").sort({ academicYear: -1 }),
+      DegreeProgram.find({ isActive: true }).select("name departmentId").sort({ name: 1 }),
+      MilestoneTemplate.find({ isActive: true }).select("name departmentId").sort({ name: 1 }),
     ]);
 
-    return res.status(200).json({ departments, batches });
+    const activeDepartments = new Set(departments.map((item) => String(item._id)));
+    return res.status(200).json({ departments, batches, programs: programs.filter((item) => activeDepartments.has(String(item.departmentId))), milestoneTemplates: milestoneTemplates.filter((item) => !item.departmentId || activeDepartments.has(String(item.departmentId))) });
   } catch (error) {
     return next(error);
   }
@@ -111,13 +117,15 @@ export const registerUser = async (req, res, next) => {
       regNo,
       department,
       batch,
-      program,
+      program: submittedProgram,
+      programId,
       designation,
       expertise,
       institution,
       phone,
       invitationToken,
     } = req.body;
+    let program = submittedProgram;
 
     const textFields = { name, email, password, confirmPassword, role, regNo, department, batch, program, designation, institution, phone, invitationToken };
     if (Object.values(textFields).some((value) => value !== undefined && typeof value !== "string")) {
@@ -208,7 +216,7 @@ export const registerUser = async (req, res, next) => {
       }
 
       if (!program || !program.trim()) {
-        return res.status(400).json({ message: "Program is required." });
+        if (!programId) return res.status(400).json({ message: "Program is required." });
       }
 
       const [departmentDoc, batchDoc] = await Promise.all([
@@ -222,6 +230,13 @@ export const registerUser = async (req, res, next) => {
 
       if (!batchDoc) {
         return res.status(400).json({ message: "Please select a valid batch." });
+      }
+      let selectedProgram;
+      if (programId !== undefined) {
+        if (!mongoose.isObjectIdOrHexString(programId)) return res.status(400).json({ message: "Invalid program ID." });
+        selectedProgram = await DegreeProgram.findOne({ _id: programId, departmentId: departmentDoc._id, isActive: true });
+        if (!selectedProgram) return res.status(400).json({ message: "Select an active program in your department." });
+        program = selectedProgram.name;
       }
 
       const createdUser = await User.create({
@@ -239,6 +254,7 @@ export const registerUser = async (req, res, next) => {
         departmentId: departmentDoc._id,
         batchId: batchDoc._id,
         program: program.trim(),
+        programId: selectedProgram?._id || null,
       });
 
       createdUser.isActive = true;
