@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const batchSchema = new mongoose.Schema(
   {
+    isActive: { type: Boolean, default: true },
     batchName: {
       type: String,
       required: true,
@@ -19,7 +20,9 @@ const batchSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    optimisticConcurrency: true,
   }
 );
 
+batchSchema.index({ batchName: 1 }, { unique: true, collation: { locale: "en", strength: 2 } });
 export default mongoose.model("batch", batchSchema);

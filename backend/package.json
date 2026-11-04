@@ -15,7 +15,10 @@
     "check:stack": "node scripts/check-stack.js",
     "seed:demo": "node scripts/seed-demo.js",
     "seed:reference": "node scripts/seed-reference.js",
-    "invite:supervisor": "node scripts/invite-supervisor.js"
+    "invite:supervisor": "node scripts/invite-supervisor.js",
+    "bootstrap:admin": "node scripts/bootstrap-admin.js",
+    "admin:indexes": "node scripts/admin-indexes.js",
+    "check:admin": "node scripts/check-admin.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const departmentSchema = new mongoose.Schema(
   {
+    isActive: { type: Boolean, default: true },
     name: {
       type: String,
       required: true,
@@ -20,7 +21,9 @@ const departmentSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    optimisticConcurrency: true,
   }
 );
 
+departmentSchema.index({ name: 1 }, { unique: true, collation: { locale: "en", strength: 2 } });
 export default mongoose.model("departments", departmentSchema);
